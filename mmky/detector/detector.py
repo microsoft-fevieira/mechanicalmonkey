@@ -3,7 +3,7 @@ import os
 rootdir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 datadir = os.path.join(rootdir, "data / collector")
 os.sys.path.insert(0, rootdir)
-import k4a
+import mmky.k4a
 import cv2
 import numpy as np
 import math
@@ -31,8 +31,7 @@ class KinectDetector(object):
 
         # turn on the kinect
         self.k4a = k4a.Device.open(id)
-        config = k4a.DeviceConfiguration(color_format=k4a.EImageFormat.COLOR_BGRA32, depth_mode=k4a.EDepthMode.NFOV_UNBINNED)
-        self.k4a.start_cameras(config) # for now, depth only, hardcoded mode
+        self.config = k4a.DeviceConfiguration(color_format=k4a.EImageFormat.COLOR_BGRA32, depth_mode=k4a.EDepthMode.NFOV_UNBINNED)
         self.calibration = self.k4a.get_calibration(depth_mode=k4a.EDepthMode.NFOV_UNBINNED, color_format=k4a.EImageFormat.COLOR_BGRA32)
         self.transform = k4a.Transformation.create(self.calibration)
 
@@ -46,13 +45,14 @@ class KinectDetector(object):
         else:
             input("Starting background capture. Make sure the workspace is clear and press Enter to continue...")
             cnt = 30
+            self.start()
             capture = self.k4a.get_capture(-1)
             depth_img = capture.depth
             for i in range(cnt - 1):
                 capture = self.k4a.get_capture(-1)
                 depth_img += capture.depth
                 time.sleep(0.033)
-
+            self.stop()
             self.background = (depth_img / cnt).astype(np.int16)
             self.background.tofile(bkg_file_name)
 
@@ -96,6 +96,12 @@ class KinectDetector(object):
 
         if reinit:
             input("Detector reconfiguration completed. Set up the scene and press Enter to continue...")
+
+    def stop(self):
+        self.k4a.stop_cameras()
+
+    def start(self):
+        self.k4a.start_cameras(self.config)
 
     def close(self):
         self.k4a.close()
@@ -189,17 +195,15 @@ class KinectDetector(object):
     def get_last_image(self, crop_to_mask=True):
         return self.last_raw_color_image[self.rgb_mask_bounding_box] if crop_to_mask else self.last_raw_color_image
 
-def create(cam_id=DEFAULT_KINECT_ID, cam2arm_file="cam2arm.csv", reset_bkground=False):
-    return KinectDetector(cam_id, cam2arm_file, reset_bkground)
-
 def debug():
-    eye = create(None)
+    eye = KinectDetector()
     while True:
         eye.detect_keypoints()
 
 def display_depth():
     cam = k4a.Device.open(DEFAULT_KINECT_ID)
-    cam.start_cameras()
+    config = k4a.DeviceConfiguration(color_format=k4a.EImageFormat.COLOR_BGRA32, depth_mode=k4a.EDepthMode.NFOV_UNBINNED)
+    cam.start_cameras(config)
     while True:
         capture = cam.get_capture(-1)
         depth_img = capture.depth

@@ -1,0 +1,26 @@
+use_sim: True
+obs_res: [84, 84]
+workspace: [2.356, 3.927, 0.25, 0.45]
+robot:
+  arm_ip: 192.168.1.2
+  hand_ip: 192.168.1.11
+  local_ip: 192.168.1.9
+  local_port: 50003
+
+sim_scene:
+  cube_size: 0.05
+  cameras:
+    cam1:
+      cameraEyePosition: [-1.0, -0.6, 0.2]
+      cameraTargetPosition: [0, 0.2, 0]
+      cameraUpVector: [0, 0, 1]
+      fov: 70
+
+real_scene:
+  detector_cam_id: 0
+  out_position: Joints(0, -1.571, 1.571, -1.571, -1.571, 0)
+  neutral_position: None
+  cameras:
+    cam1:
+      id: 1
+      type: k4a
