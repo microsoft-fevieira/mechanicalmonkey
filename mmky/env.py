@@ -20,12 +20,9 @@ class RomanEnv(gym.Env):
         robot_config = config.get("robot_config", {})
         self.robot = Robot(use_sim=use_sim, **robot_config).connect()
         self.obs_res = config.get("obs_res", (84, 84))
-        if use_sim:
-            sim_config = config.get("sim_scene", {})
-            self.scene = simscenefn(robot=self.robot, obs_res=self.obs_res, **sim_config).connect()
-        else:
-            real_config = config.get("sim_scene", {})
-            self.scene = realscenefn(robot=self.robot, obs_res=self.obs_res, **real_config).connect()
+        scene_fn, scene_cfg = (simscenefn, "sim_scene") if use_sim else (realscenefn, "real_scene")
+        scene_config = config.get(scene_cfg, {})
+        self.scene = scene_fn(robot=self.robot, obs_res=self.obs_res, **scene_config).connect()
 
         camera_count = self.scene.get_camera_count()
         self.observation_space = Dict({

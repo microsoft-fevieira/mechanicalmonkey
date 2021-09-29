@@ -8,7 +8,9 @@ class StackExpert:
         self.env = env
 
     def move(self, current, target):
-        while not np.allclose(current, target, rtol=0, atol=0.01):
+        x = 1
+        y = 0
+        while x or y:
             delta = target - current
             x = 0 if abs(delta[0]) < 0.002 else 1 if delta[0] > 0 else -1
             y = 0 if abs(delta[1]) < 0.002 else 1 if delta[1] > 0 else -1
@@ -47,5 +49,4 @@ class StackExpert:
 if __name__ == '__main__':
     env = StackEnv()
     expert = StackExpert(env)
-    env.render()
     expert.stack()
