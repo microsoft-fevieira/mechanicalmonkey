@@ -12,9 +12,8 @@ CUBE_COUNT = 2
 
 class StackEnv(RomanEnv):
     def __init__(self):
-        f = open(os.path.join(os.path.dirname(__file__), 'config.yaml'))
-        config = yaml.safe_load(f)
-        f.close()
+        with open(os.path.join(os.path.dirname(__file__), 'config.yaml')) as f:
+            config = yaml.safe_load(f)
         super().__init__(StackSim, StackReal, config)
         self.action_space = Box(low=-1, high=1, shape=(3,))
         self.workspace = config.get("workspace", [math.pi - 0.5, math.pi + 0.5, 0.25, 0.45])
@@ -40,7 +39,7 @@ class StackEnv(RomanEnv):
             self.__move(*action[:2])
 
     def __move(self, dx, dy):
-        self.robot.move_simple(0.05 * dx, 0.05 * dy, 0, 0, timeout=0.05)
+        self.robot.move_simple(0.01 * dx, 0.01 * dy, 0, 0, timeout=0)
 
     def __pick(self):
         (arm_state, _) = self.robot.read()

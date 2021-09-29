@@ -1,6 +1,5 @@
-use_sim: True
-obs_res: [84, 84]
-workspace: [3.5, 4.2, 0.5, 0.75]
+use_sim: False
+obs_res: [256, 256]
 robot:
   arm_ip: 192.168.1.2
   hand_ip: 192.168.1.11
@@ -8,7 +7,6 @@ robot:
   local_port: 50003
 
 sim_scene:
-  cube_size: 0.05
   cameras:
     cam1:
       cameraEyePosition: [-1.0, -0.6, 0.2]
@@ -17,9 +15,6 @@ sim_scene:
       fov: 70
 
 real_scene:
-  detector_cam_id: 1
-  out_position: Joints(1.571, -1.571, 1.571, -1.571, -1.571, 0)
-  neutral_position: Joints(0.786, -1.571, 1.571, -1.571, -1.571, 0)
   cameras:
     cam1:
       id: 0

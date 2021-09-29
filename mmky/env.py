@@ -3,6 +3,7 @@ from gym.spaces import Box, Dict, Tuple
 import numpy as np
 import math
 import random
+import torch
 from roman import Robot, SimScene
 from roman.ur import arm
 from roman.rq import hand
@@ -37,10 +38,17 @@ class RomanEnv(gym.Env):
             "arm": Box(low=-np.inf, high=np.inf, shape=(arm.Command._BUFFER_SIZE,)),
             "hand": Box(low=-np.inf, high=np.inf, shape=(hand.Command._BUFFER_SIZE,))})
 
+    def close(self):
+        self.robot.disconnect()
+        self.robot = None
+        self.scene.disconnect()
+        self.scene = None
+
     def seed(seed=None):
         """Sets the seed for this env's random number generator."""
         np.random.seed(seed)
         random.seed(seed)
+        torch.manual_seed(seed)
 
     def reset(self):
         self.scene.reset()
@@ -54,7 +62,7 @@ class RomanEnv(gym.Env):
         return obs, rew, done, {}
 
     def render(self, mode='human'):
-        (img, _) = self.scene.get_camera_images()[0]
+        img = self._last_state["cameras"][0]
         if mode == 'rgb_array':
             return img
         elif mode == 'human':
@@ -62,20 +70,21 @@ class RomanEnv(gym.Env):
             cv2.waitKey(1)
 
     def _observe(self):
-        arm_state, hand_state = self.robot.read()
+        arm_state, hand_state = self.robot.last_state()
         last_arm_cmd, last_hand_cmd = self.robot.last_command()
         images = self.scene.get_camera_images()
         world = self.scene.get_world_state()
-        return {"cameras": images,
+        self._last_state = {
+                "cameras": images,
                 "world": world,
                 "arm_state": arm_state,
                 "hand_state": hand_state,
                 "last_arm_cmd": last_arm_cmd,
                 "last_hand_cmd": last_hand_cmd}
+        return self._last_state
 
     def _act(self, action):
-        #self.robot.execute(action[0], action[1])
-        pass
+        self.robot.execute(action[0], action[1])
 
     def _reward(self, obs):
         return 0
