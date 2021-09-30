@@ -4,8 +4,6 @@ import os
 import time
 import numpy as np
 import h5py
-from roman import Tool, JointSpeeds
-from roman.rq.hand import Command as GraspCommand
 
 from mmky.tasks.robomimic.simpleenv import SimpleEnv
 try:
@@ -84,7 +82,7 @@ if __name__ == '__main__':
                 while gps.buttons == BTN_A:
                     gps = get_gamepad_state()
                 success = not success
-                print(f"Success flag flipped to {success}")
+                print(f"success = {success}")
 
             # B means the episode is done
             done = gps.buttons == BTN_B
@@ -112,7 +110,7 @@ if __name__ == '__main__':
         }
 
         #path = os.path.join(os.path.dirname(__file__), f'{episode}-{time.time()}.hdf5')
-        path = os.path.join("D:\\public\\sampletraj", f'{episode}-{time.time()}.hdf5')
+        path = os.path.join("C:\\recordings\\simpletraj", f'{episode}-{time.time()}.hdf5')
         with h5py.File(path, 'w') as f:
             for k, v in episode_data.items():
                 f.create_dataset(k, data=np.stack(v))

@@ -4,10 +4,11 @@ import numpy as np
 import math
 import random
 import torch
-from roman import Robot, SimScene
+from roman import Robot
 from roman.ur import arm
 from roman.rq import hand
 from mmky.realscene import RealScene
+from mmky.simscene import SimScene
 import cv2
 
 
