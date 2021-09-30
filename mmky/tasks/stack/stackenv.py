@@ -28,6 +28,7 @@ class StackEnv(RomanEnv):
         self.robot.open()
         self.robot.pinch(128)
         self.robot.active_force_limit = (None, None)
+        self.__z = self.robot.tool_pose[Tool.Z]
         return self._observe()
 
     def _act(self, action):
@@ -39,25 +40,24 @@ class StackEnv(RomanEnv):
             self.__move(*action[:2])
 
     def __move(self, dx, dy):
-        self.robot.move_simple(0.01 * dx, 0.01 * dy, 0, 0, timeout=0)
+        pose = self.robot.tool_pose
+        pose = Tool.from_xyzrpy(pose.to_xyzrpy() + [0.01 * dx, 0.01 * dy, 0, 0, 0, 0])
+        pose[Tool.Z] = self.__z
+        self.robot.move(pose, max_speed=0.5, max_acc=2, timeout=0)
 
     def __pick(self):
-        (arm_state, _) = self.robot.read()
-        back = arm_state.tool_pose()
+        back = self.robot.tool_pose
         pick_pose = back.clone()
         pick_pose[Tool.Z] = GRASP_HEIGHT
         self.robot.move(pick_pose)
         self.robot.pinch()
         self.robot.move(back)
-        (_, hand_state) = self.robot.read()
-        self.__has_object = hand_state.object_detected()
+        self.__has_object = self.robot.has_object
 
     def __place(self):
-        (arm_state, _) = self.robot.read()
-        back = arm_state.tool_pose()
+        back = self.robot.tool_pose
         stack_pose = back.clone()
         stack_pose[Tool.Z] = GRASP_HEIGHT
         self.robot.touch(stack_pose)
         self.robot.release(128)
         self.robot.move(back, max_speed=2, max_acc=1)
-        (_, hand_state) = self.robot.read()
