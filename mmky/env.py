@@ -19,8 +19,8 @@ class RomanEnv(gym.Env):
         super().__init__()
         self.config = config
         use_sim = config.get("use_sim", True)
-        robot_config = config.get("robot_config", {})
-        self.robot = Robot(use_sim=use_sim, **robot_config).connect()
+        robot_config = config.get("robot", {})
+        self.robot = Robot(use_sim=use_sim, config=robot_config).connect()
         self.obs_res = config.get("obs_res", (84, 84))
         scene_fn, scene_cfg = (simscenefn, "sim_scene") if use_sim else (realscenefn, "real_scene")
         scene_config = config.get(scene_cfg, {})
@@ -76,12 +76,12 @@ class RomanEnv(gym.Env):
         images = self.scene.get_camera_images()
         world = self.scene.get_world_state()
         self._last_state = {
-                "cameras": images,
-                "world": world,
-                "arm_state": arm_state,
-                "hand_state": hand_state,
-                "last_arm_cmd": last_arm_cmd,
-                "last_hand_cmd": last_hand_cmd}
+            "cameras": images,
+            "world": world,
+            "arm_state": arm_state,
+            "hand_state": hand_state,
+            "last_arm_cmd": last_arm_cmd,
+            "last_hand_cmd": last_hand_cmd}
         return self._last_state
 
     def _act(self, action):
@@ -98,4 +98,4 @@ class RomanEnv(gym.Env):
         # Sample a random distance from the coordinate origin (i.e., arm base) and a random angle.
         dist = min_dist + random.random() * (max_dist - min_dist)
         angle = min_angle_in_rad + random.random() * (max_angle_in_rad - min_angle_in_rad)
-        return dist * math.cos(angle), dist * math.sin(angle)
+        return [dist * math.cos(angle), dist * math.sin(angle)]

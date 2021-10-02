@@ -1,14 +1,13 @@
 import math
 import os
 from gym.spaces import Box
-from roman import Tool
+from roman import Tool, JointSpeeds
 from mmky.env import RomanEnv
 from mmky.tasks.pour.poursim import PourSim
 from mmky.tasks.pour.pourreal import PourReal
 import yaml
 
 GRASP_HEIGHT = 0.04
-CUBE_COUNT = 2
 
 class PourEnv(RomanEnv):
     def __init__(self):
@@ -17,10 +16,11 @@ class PourEnv(RomanEnv):
         super().__init__(PourSim, PourReal, config)
         self.action_space = Box(low=-1, high=1, shape=(3,))
         self.workspace = config.get("workspace", [math.pi - 0.5, math.pi + 0.5, 0.25, 0.45])
+        self.__joints = self.robot.joint_positions
 
     def reset(self):
-        cube_positions = list(self.generate_random_xy(*self.workspace) + (0.025,) for i in range(CUBE_COUNT))
-        self.scene.reset(cube_positions)
+        source_cup_pos, target_cup_pos = list(self.generate_random_xy(*self.workspace) + [0.025] for i in range(2))
+        self.scene.reset(source_cup_pos, target_cup_pos)
         (arm_state, had_state) = self.robot.read()
         start = arm_state.tool_pose()
         start[:2] = self.generate_random_xy(*self.workspace)
@@ -29,6 +29,7 @@ class PourEnv(RomanEnv):
         self.robot.pinch(128)
         self.robot.active_force_limit = (None, None)
         self.__z = self.robot.tool_pose[Tool.Z]
+        self.__joints = self.robot.joint_positions
         return self._observe()
 
     def _act(self, action):
@@ -39,11 +40,19 @@ class PourEnv(RomanEnv):
         else:
             self.__move(*action[:2])
 
-    def __move(self, dx, dy):
+    def __move(self, dx, dy, droll):
         pose = self.robot.tool_pose
-        pose = Tool.from_xyzrpy(pose.to_xyzrpy() + [0.01 * dx, 0.01 * dy, 0, 0, 0, 0])
+        jc = self.robot.joint_positions
+        pose = Tool.from_xyzrpy(pose.to_xyzrpy() + [0.04 * dx, 0.04 * dy, 0, 0, 0, 0])
         pose[Tool.Z] = self.__z
-        self.robot.move(pose, max_speed=0.5, max_acc=2, timeout=0)
+        self.robot.move(pose, max_acc=0.0, timeout=0)
+        # after the move call, the target_joint_positions is the IK solution
+        jt = self.robot.arm.state.target_joint_positions().clone()
+        js = self.__joints
+        dj = jt - jc
+        dsj = js - jc # keep the last joints in the start configuration
+        speeds = JointSpeeds(dj[0], dj[1], dj[2], dsj[3], dsj[4], dj[5] + 0.01 * droll)
+        self.robot.move(speeds, max_acc=5, timeout=0)
 
     def __pick(self):
         back = self.robot.tool_pose

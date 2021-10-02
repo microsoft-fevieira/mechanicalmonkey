@@ -1,7 +1,5 @@
 from mmky.tasks.stack.stackenv import StackEnv
-from roman import Robot, Tool
 import random
-import numpy as np
 
 class StackExpert:
     def __init__(self, env: StackEnv):
@@ -16,7 +14,8 @@ class StackExpert:
             y = 0 if abs(delta[1]) < 0.002 else 1 if delta[1] > 0 else -1
             obs, _, _, _ = self.env.step([x, y, 0])
             current = obs["arm_state"].tool_pose()[:2]
-        self.env.step([0, 0, 0])
+        for i in range(10):
+            self.env.step([0, 0, 0])
 
     def stack(self):
         obs = self.env.reset()
@@ -37,7 +36,7 @@ class StackExpert:
         current = obs["arm_state"].tool_pose()[:2]
         target = objects[target_id][:2]
         self.move(current, target)
-        
+
         obs, _, _, _ = self.env.step([0, 0, -1]) # place
 
         # verfy success
@@ -46,6 +45,7 @@ class StackExpert:
         # reset the scene
 
         #reset()
+
 
 if __name__ == '__main__':
     env = StackEnv()

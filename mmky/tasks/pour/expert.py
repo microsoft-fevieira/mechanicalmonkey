@@ -1,25 +1,28 @@
 from mmky.tasks.pour.pourenv import PourEnv
-from roman import Robot, Tool
 import random
-import numpy as np
 
 class PourExpert:
     def __init__(self, env: PourEnv):
         self.env = env
 
     def move(self, current, target):
-        while not np.allclose(current, target, rtol=0, atol=0.01):
+        x = 1
+        y = 0
+        while x or y:
             delta = target - current
             x = 0 if abs(delta[0]) < 0.002 else 1 if delta[0] > 0 else -1
             y = 0 if abs(delta[1]) < 0.002 else 1 if delta[1] > 0 else -1
             obs, _, _, _ = self.env.step([x, y, 0])
             current = obs["arm_state"].tool_pose()[:2]
+        for i in range(10):
+            self.env.step([0, 0, 0])
 
     def pour(self):
         obs = self.env.reset()
         objects = obs["world"]
         home_pose = obs["arm_state"].tool_pose()
 
+        # TODO:.....
         # pick a random cube as the target
         target_id, source_id = random.sample(objects.keys(), k=2)
 
@@ -44,8 +47,8 @@ class PourExpert:
 
         #reset()
 
+
 if __name__ == '__main__':
     env = PourEnv()
     expert = PourExpert(env)
-    env.render()
     expert.pour()

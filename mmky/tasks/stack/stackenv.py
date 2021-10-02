@@ -19,7 +19,7 @@ class StackEnv(RomanEnv):
         self.workspace = config.get("workspace", [math.pi - 0.5, math.pi + 0.5, 0.25, 0.45])
 
     def reset(self):
-        cube_positions = list(self.generate_random_xy(*self.workspace) + (0.025,) for i in range(CUBE_COUNT))
+        cube_positions = list(self.generate_random_xy(*self.workspace) + [0.025] for i in range(CUBE_COUNT))
         self.scene.reset(cube_positions)
         (arm_state, had_state) = self.robot.read()
         start = arm_state.tool_pose()
