@@ -22,22 +22,14 @@ class PourExpert:
         objects = obs["world"]
         home_pose = obs["arm_state"].tool_pose()
 
-        
-        
-
-        # get the cube
-        current = home_pose[:2]
-        source = objects[source_id][:2]
-        self.move(current, source)
-
-        obs, _, _, _ = self.env.step([0, 0, 1]) # pick
-
-        # place at target location
+        # move to the second cup
         current = obs["arm_state"].tool_pose()[:2]
-        target = objects[target_id][:2]
+        target = list(self.env.target_cup_pos[:2])
+        target[1] -= 0.1
         self.move(current, target)
 
-        obs, _, _, _ = self.env.step([0, 0, -1]) # place
+        # pour
+        self.env.step([0, 0, -1])
 
         # verfy success
         #verify()

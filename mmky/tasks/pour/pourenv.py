@@ -20,10 +20,10 @@ class PourEnv(RomanEnv):
         self.workspace = config.get("workspace", [math.pi - 0.5, math.pi + 0.5, 0.25, 0.45])
 
     def reset(self):
-        source_cup_pos, target_cup_pos = list(self.generate_random_xy(*self.workspace) + [0.025] for i in range(2))
+        self.source_cup_pos, self.target_cup_pos = list(self.generate_random_xy(*self.workspace) + [0.025] for i in range(2))
         self.robot.open()
         self.robot.pinch(128)
-        self.scene.reset(source_cup_pos, target_cup_pos)
+        self.scene.reset(self.source_cup_pos, self.target_cup_pos)
         self.__xyzrpy = self.robot.tool_pose.to_xyzrpy()
 
         sx, sy, sz = self.scene.get_world_state()[0][:3]
@@ -39,12 +39,10 @@ class PourEnv(RomanEnv):
         return self._observe()
 
     def _act(self, action):
-        if action[2] == -1:
-            self.__place()
-        elif action[2] == 1:
-            self.__pick()
+        if action[2] != 0:
+            self.__pour(action[2])
         else:
-            self.__move(*action[:2])
+            self.__move(*action)
 
     def _tool_pose_from_xy(self, x, y):
         target = np.array(self.__xyzrpy)
@@ -73,8 +71,15 @@ class PourEnv(RomanEnv):
 
     def __place(self):
         back = self.robot.tool_pose
-        pour_pose = back.clone()
-        pour_pose[Tool.Z] = GRASP_HEIGHT
-        self.robot.touch(pour_pose)
+        release_pose = back.clone()
+        release_pose[Tool.Z] = GRASP_HEIGHT
+        self.robot.touch(release_pose)
         self.robot.release(128)
         self.robot.move(back, max_speed=2, max_acc=1)
+
+    def __pour(self, rot):
+        back = self.robot.joint_positions
+        pour_pose = back.clone()
+        pour_pose[Joints.WRIST3] += rot * math.pi / 2
+        self.robot.move(pour_pose)
+        self.robot.move(back)
