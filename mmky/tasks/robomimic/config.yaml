@@ -1,4 +1,4 @@
-use_sim: False
+use_sim: True
 obs_res: [256, 256]
 robot:
   arm_ip: 192.168.1.2

@@ -34,6 +34,7 @@ def normalize_thumb_value(v):
 def get_gamepad_state():
     return inputs.devices.gamepads[0]._GamePad__read_device().gamepad
 
+
 if __name__ == '__main__':
     # parser = ArgumentParser()
     # parser.add_argument('--config-path', required=True)
@@ -49,7 +50,7 @@ if __name__ == '__main__':
           'Press the back button to exit.')
 
     hand = 255
-    episode = 1    
+    episode = 1
     while not exit:
         # reset the episode
         print(f'Starting episode {episode}')
@@ -61,7 +62,7 @@ if __name__ == '__main__':
         # loop until the end of the episode (B button)
         success = False
         done = False
-        while not done and not exit: 
+        while not done and not exit:
             gps = get_gamepad_state()
             # the two analog thumb sticks control the first four joints
             base = -normalize_thumb_value(gps.r_thumb_x)
@@ -71,12 +72,12 @@ if __name__ == '__main__':
             # d-pad controls wrists
             wrist2 = 1 if gps.buttons == DPAD_LEFT else -1 if gps.buttons == DPAD_RIGHT else 0
             wrist3 = 1 if gps.buttons == DPAD_UP else -1 if gps.buttons == DPAD_DOWN else 0
-            
+
             if gps.left_trigger > hand:
                 hand = gps.left_trigger
             elif gps.right_trigger > 255 - hand:
                 hand = 255 - gps.right_trigger
-            
+
             # A toggles the success flag
             if gps.buttons == BTN_A:
                 while gps.buttons == BTN_A:
@@ -88,7 +89,7 @@ if __name__ == '__main__':
             done = gps.buttons == BTN_B
 
             # Back btn exits
-            exit = gps.buttons == BTN_BACK 
+            exit = gps.buttons == BTN_BACK
 
             action = [base, shoulder, elbow, wrist1, wrist2, wrist3, hand/255.]
             actions.append(action)
@@ -109,12 +110,12 @@ if __name__ == '__main__':
             'successes': successes
         }
 
-        #path = os.path.join(os.path.dirname(__file__), f'{episode}-{time.time()}.hdf5')
-        path = os.path.join("C:\\recordings\\simpletraj", f'{episode}-{time.time()}.hdf5')
+        path = os.path.join(os.path.dirname(__file__), f'{episode}-{time.time()}.hdf5')
+        #path = os.path.join("C:\\recordings\\simpletraj", f'{episode}-{time.time()}.hdf5')
         with h5py.File(path, 'w') as f:
             for k, v in episode_data.items():
                 f.create_dataset(k, data=np.stack(v))
-        
+
         print(f"Episode saved at {path}")
         episode += 1
 
