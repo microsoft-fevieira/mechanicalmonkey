@@ -5,7 +5,7 @@ import time
 import random
 import os
 from roman import connect, Robot, Tool, Joints, GraspMode
-import detector
+from detector import KinectDetector
 
 rootdir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 datadir = os.path.join(rootdir, "data/collector")
@@ -186,16 +186,19 @@ def compute_and_verify():
         print(eye.get_visual_target())
 
 def check_cam_arm_calibration(robot:Robot):
-    # robot.hand.open()
-    # robot.hand.set_mode(GraspMode.PINCH)
     neutral_pose = Tool(-0.4, -0.4, 0.2, 0, math.pi, 0)
     target_pose = Tool.fromarray(neutral_pose)
     pick_pose = Tool.fromarray(neutral_pose)
     robot.arm.move(neutral_pose, max_speed=1, max_acc=0.5)
+    
+    robot.hand.open()
+    robot.hand.set_mode(GraspMode.PINCH)
+    robot.hand.close()
+
     out_position = Joints.fromarray(robot.arm.state.joint_positions())
     out_position[Joints.BASE] = math.pi*9/10
     robot.arm.move(out_position, max_speed=1, max_acc=0.5)
-    eye = detector.create(detector.DEFAULT_KINECT_ID)
+    eye = KinectDetector()
 
     while True:
         pose = eye.get_visual_target()

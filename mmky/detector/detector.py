@@ -7,7 +7,7 @@ import math
 import time
 import random
 
-DEFAULT_KINECT_ID = 0
+DEFAULT_KINECT_ID = 1
 
 class KinectDetector(object):
 

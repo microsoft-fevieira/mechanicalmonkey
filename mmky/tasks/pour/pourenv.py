@@ -1,13 +1,15 @@
 import math
 import os
 from gym.spaces import Box
-from roman import Tool, JointSpeeds
+import numpy as np
+import yaml
+
+from roman import Tool, Joints, JointSpeeds
 from mmky.env import RomanEnv
 from mmky.tasks.pour.poursim import PourSim
 from mmky.tasks.pour.pourreal import PourReal
-import yaml
 
-GRASP_HEIGHT = 0.04
+GRASP_OFFSET = 0.04
 
 class PourEnv(RomanEnv):
     def __init__(self):
@@ -16,20 +18,24 @@ class PourEnv(RomanEnv):
         super().__init__(PourSim, PourReal, config)
         self.action_space = Box(low=-1, high=1, shape=(3,))
         self.workspace = config.get("workspace", [math.pi - 0.5, math.pi + 0.5, 0.25, 0.45])
-        self.__joints = self.robot.joint_positions
 
     def reset(self):
         source_cup_pos, target_cup_pos = list(self.generate_random_xy(*self.workspace) + [0.025] for i in range(2))
-        self.scene.reset(source_cup_pos, target_cup_pos)
-        (arm_state, had_state) = self.robot.read()
-        start = arm_state.tool_pose()
-        start[:2] = self.generate_random_xy(*self.workspace)
-        self.robot.move(start, max_speed=3, max_acc=1)
         self.robot.open()
         self.robot.pinch(128)
+        self.scene.reset(source_cup_pos, target_cup_pos)
+        self.__xyzrpy = self.robot.tool_pose.to_xyzrpy()
+
+        sx, sy, sz = self.scene.get_world_state()[0][:3]
+        pick_pose = self._tool_pose_from_xy(sx, sy)
+        self.robot.move(pick_pose)
+        self.__pick()
+        
+        x, y = self.generate_random_xy(*self.workspace)
+        start = self._tool_pose_from_xy(x, y)
+        self.robot.move(start)
+        
         self.robot.active_force_limit = (None, None)
-        self.__z = self.robot.tool_pose[Tool.Z]
-        self.__joints = self.robot.joint_positions
         return self._observe()
 
     def _act(self, action):
@@ -40,24 +46,26 @@ class PourEnv(RomanEnv):
         else:
             self.__move(*action[:2])
 
-    def __move(self, dx, dy, droll):
+    def _tool_pose_from_xy(self, x, y):
+        target = np.array(self.__xyzrpy)
+        target[:2] = x, y
+        target[5] = math.atan2(y, x) + math.pi/2 #yaw, compensating for robot config offset (base offset is pi, wrist offset from base is -pi/2)
+        return Tool.from_xyzrpy(target)
+
+    def __move(self, dx, dy, dr):
         pose = self.robot.tool_pose
-        jc = self.robot.joint_positions
-        pose = Tool.from_xyzrpy(pose.to_xyzrpy() + [0.04 * dx, 0.04 * dy, 0, 0, 0, 0])
-        pose[Tool.Z] = self.__z
-        self.robot.move(pose, max_acc=0.0, timeout=0)
-        # after the move call, the target_joint_positions is the IK solution
-        jt = self.robot.arm.state.target_joint_positions().clone()
-        js = self.__joints
-        dj = jt - jc
-        dsj = js - jc # keep the last joints in the start configuration
-        speeds = JointSpeeds(dj[0], dj[1], dj[2], dsj[3], dsj[4], dj[5] + 0.01 * droll)
-        self.robot.move(speeds, max_acc=5, timeout=0)
+        joints = self.robot.joint_positions
+        target = self._tool_pose_from_xy(pose[Tool.X] + 0.04 * dx, pose[Tool.Y] + 0.04 * dy)
+        self.robot.move(target, max_acc=0, timeout=0) # get_IK
+        jtarget = self.robot.arm.state.target_joint_positions().clone() # IK solution
+        jtarget[5] = joints[5] + 0.04 * dr
+        self.robot.move(jtarget, timeout=0)
 
     def __pick(self):
         back = self.robot.tool_pose
         pick_pose = back.clone()
-        pick_pose[Tool.Z] = GRASP_HEIGHT
+        pick_pose[Tool.Z] = -0.06
+        self.robot.open()
         self.robot.move(pick_pose)
         self.robot.pinch()
         self.robot.move(back)

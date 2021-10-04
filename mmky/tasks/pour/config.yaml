@@ -1,13 +1,13 @@
-use_sim: True
+use_sim: False
 obs_res: [84, 84]
-workspace: [3.5, 4.2, 0.65, 0.8]
+workspace: [3.5, 4.2, 0.65, 0.75]
 
 robot:
   arm_ip: 192.168.1.2
   hand_ip: 192.168.1.11
   local_ip: 192.168.1.9
   local_port: 50003
-  sim.start_config: [0.5 ,-1.39167, 2.1929, -0.648628, 1.33401, -0.355085]
+  sim.start_config: [0.5, -1.692 , 2.635, -0.943, 1.57 ,-0.262]
   sim.use_gui: True
 
 sim_scene:
@@ -21,7 +21,7 @@ sim_scene:
 
 real_scene:
   detector_cam_id: 1
-  out_position: Joints(1.30374 ,-1.39167 , 2.1929  ,-0.648628, 1.33401 ,-0.355085)
+  out_position: Joints(1.28, -1.692 , 2.635, -0.943, 1.57 ,-0.262)
   neutral_position: None
   cameras:
     cam1:

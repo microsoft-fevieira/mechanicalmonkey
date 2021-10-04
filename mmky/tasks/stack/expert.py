@@ -27,14 +27,14 @@ class StackExpert:
 
         # get the cube
         current = home_pose[:2]
-        source = objects[source_id][:2]
+        source = objects[source_id]["position"][:2]
         self.move(current, source)
 
         obs, _, _, _ = self.env.step([0, 0, 1]) # pick
 
         # place at target location
         current = obs["arm_state"].tool_pose()[:2]
-        target = objects[target_id][:2]
+        target = objects[target_id]["position"][:2]
         self.move(current, target)
 
         obs, _, _, _ = self.env.step([0, 0, -1]) # place

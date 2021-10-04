@@ -22,9 +22,8 @@ class PourExpert:
         objects = obs["world"]
         home_pose = obs["arm_state"].tool_pose()
 
-        # TODO:.....
-        # pick a random cube as the target
-        target_id, source_id = random.sample(objects.keys(), k=2)
+        
+        
 
         # get the cube
         current = home_pose[:2]
