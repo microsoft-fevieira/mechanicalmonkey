@@ -40,10 +40,10 @@ class RomanEnv(gym.Env):
             "hand": Box(low=-np.inf, high=np.inf, shape=(hand.Command._BUFFER_SIZE,))})
 
     def close(self):
-        self.robot.disconnect()
-        self.robot = None
         self.scene.disconnect()
         self.scene = None
+        self.robot.disconnect()
+        self.robot = None
 
     def seed(seed=None):
         """Sets the seed for this env's random number generator."""
