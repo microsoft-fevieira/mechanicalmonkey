@@ -24,9 +24,9 @@ class PourExpert:
 
         # move to the second cup
         current = obs["arm_state"].tool_pose()[:2]
-        target = list(self.env.target_cup_pos[:2])
-        target[1] -= 0.1
-        self.move(current, target)
+        tx, ty = obs["world"]["source"]["position"][:2]
+        tx, ty = self.env.shift(tx, ty, 0.04, -0.1)
+        self.move(current, self.env.pour_pos)
 
         # pour
         self.env.step([0, 0, -1])

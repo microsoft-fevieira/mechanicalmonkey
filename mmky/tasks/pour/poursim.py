@@ -6,7 +6,8 @@ from mmky import SimScene
 
 CUPMODELS = [
     # name, size in m (must match the obj file)
-    ("cup_tex", [0.100, 0.100, 0.150]), # this is also the target cup's model
+    ("cup_no_tex", [0.100, 0.100, 0.150]), # this is also the target cup's model
+    ("cup_tex", [0.100, 0.100, 0.150]),
     ("barrel_cup", [0.080, 0.080, 0.100]),
     ("cone_cup", [0.100, 0.100, 0.100]),
     ("cone_cup_modified", [0.100, 0.100, 0.100]),
@@ -27,7 +28,6 @@ CUPMODELS = [
 TARGET_CUP_MODEL = 0
 OBJ_MODEL_UNIT = 0.001 # obj files are in mm, we need to convert to meters
 CUP_BOTTOM_LIMIT = 0.05
-BALL_RADIUS = 0.005
 
 class PourSim(SimScene):
     def __init__(self,
@@ -35,6 +35,7 @@ class PourSim(SimScene):
                  obs_res,
                  ball_count=3,
                  cup_size=0.10,
+                 ball_radius=0.02,
                  rand_size=False,
                  rand_tex=False,
                  rand_mesh=False,
@@ -42,6 +43,7 @@ class PourSim(SimScene):
                  cameras={}):
         super().__init__(robot=robot, obs_res=obs_res, cameras=cameras)
         self.cup_size = cup_size
+        self.ball_radius = ball_radius
         self.rand_size = rand_size
         self.rand_tex = rand_tex
         self.rand_mesh = rand_mesh
@@ -62,11 +64,12 @@ class PourSim(SimScene):
                                                                       orientation,
                                                                       [scale] * 3,
                                                                       rand_tex=self.rand_tex,
-                                                                      rand_mesh=self.rand_mesh)
+                                                                      rand_mesh=self.rand_mesh,
+                                                                      tag="source")
 
         self.balls = np.zeros((self.ball_count), int)
         for i in range(self.ball_count):
-            self.balls[i] = self.make_ball(BALL_RADIUS,
+            self.balls[i] = self.make_ball(self.ball_radius,
                                            self.cup_position + [0, 0, CUP_BOTTOM_LIMIT + 0.05],
                                            mass=0.005,
                                            color=[0.8, 0.8, 1, 1],
@@ -111,7 +114,7 @@ class PourSim(SimScene):
         ball_data = self.get_ball_counts()
         return ball_data["poured"]
 
-    def _load_any_cup(self, position, orientation, scale, rand_color=True, rand_tex=False, rand_mesh=False):
+    def _load_any_cup(self, position, orientation, scale, rand_color=True, rand_tex=False, rand_mesh=False, tag=None):
         model = random.choice(CUPMODELS) if rand_mesh else CUPMODELS[TARGET_CUP_MODEL]
         id = self._load_cup(model[0],
                             position=position,
@@ -119,7 +122,8 @@ class PourSim(SimScene):
                             scale=np.array(scale) * OBJ_MODEL_UNIT,
                             mass=.1,
                             rand_tex=rand_tex,
-                            rand_color=rand_color)
+                            rand_color=rand_color,
+                            tag=tag)
         return (id, model[0], np.array(model[1]) * scale)
 
     def _load_target_cup(self, position=[0, 0, 0], orientation=[0, 0, 0, 1], rand_color=False, rand_tex=False):
@@ -129,9 +133,10 @@ class PourSim(SimScene):
                               scale=[OBJ_MODEL_UNIT] * 3,
                               mass=10,
                               rand_tex=rand_tex,
-                              rand_color=rand_color,)
+                              rand_color=rand_color,
+                              tag="target")
 
-    def _load_cup(self, name, position, orientation, scale, mass, rand_color=False, rand_tex=False):
+    def _load_cup(self, name, position, orientation, scale, mass, rand_color=False, rand_tex=False, tag=None):
         color = [random.random(), random.random(), random.random(), 1] if rand_color else [1, 1, 1, 1]
         tex = random.choice(self.textures) if rand_tex else None
         mesh = "cup\\" + name + ".obj"
@@ -143,4 +148,5 @@ class PourSim(SimScene):
                              scale=scale,
                              mass=mass,
                              tex=tex,
-                             color=color)
+                             color=color,
+                             tag=tag)

@@ -1,4 +1,4 @@
-use_sim: False
+use_sim: True
 obs_res: [84, 84]
 workspace: [3.5, 4.2, 0.65, 0.75]
 
@@ -7,11 +7,12 @@ robot:
   hand_ip: 192.168.1.11
   local_ip: 192.168.1.9
   local_port: 50003
-  sim.start_config: [0.5, -1.692 , 2.635, -0.943, 1.57 ,-0.262]
+  sim.start_config: [0.5, -2 , 2.427, -0.427, 1.57 ,-0.262]
   sim.use_gui: True
 
 sim_scene:
-  cup_size: 0.10
+  cup_size: 0.104
+  ball_radius: 0.02
   cameras:
     cam1:
       cameraEyePosition: [-1.0, -0.6, 0.2]
