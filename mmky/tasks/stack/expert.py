@@ -39,13 +39,6 @@ class StackExpert:
 
         obs, _, _, _ = self.env.step([0, 0, -1]) # place
 
-        # verfy success
-        #verify()
-
-        # reset the scene
-
-        #reset()
-
 
 if __name__ == '__main__':
     env = StackEnv()

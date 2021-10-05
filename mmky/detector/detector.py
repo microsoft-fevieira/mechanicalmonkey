@@ -11,24 +11,24 @@ DEFAULT_KINECT_ID = 1
 
 class KinectDetector(object):
 
-    def __init__(self, id=DEFAULT_KINECT_ID, cam2arm_file="cam2arm.csv", reset_bkground=False, datadir="data"):
+    def __init__(self, device_id=DEFAULT_KINECT_ID, cam2arm_file="cam2arm.csv", reset_bkground=False, datadir="data", blob_detector={}):
         # set up the detector
         params = cv2.SimpleBlobDetector_Params()
-        params.filterByColor = False
-        params.filterByArea = True
-        params.minArea = 50  # The dot in 20pt font has area of about 30
-        params.maxArea = 900
-        params.filterByCircularity = False
-        params.filterByConvexity = True
-        params.filterByInertia = False
-        params.minThreshold = 80
-        params.maxThreshold = 255
-        params.thresholdStep = 10
+        params.filterByColor = blob_detector.get("filterByColor", False)
+        params.filterByArea = blob_detector.get("filterByArea", True)
+        params.minArea = blob_detector.get("minArea", 50)  # The dot in 20pt font has area of about 30
+        params.maxArea = blob_detector.get("minArea", 900)
+        params.filterByCircularity = blob_detector.get("filterByCircularity", False)
+        params.filterByConvexity = blob_detector.get("filterByConvexity", True)
+        params.filterByInertia = blob_detector.get("filterByInertia", False)
+        params.minThreshold = blob_detector.get("minThreshold", 80)
+        params.maxThreshold = blob_detector.get("maxThreshold", 255)
+        params.thresholdStep = blob_detector.get("thresholdStep", 10)
         self.detector = cv2.SimpleBlobDetector_create(params)
         self.__started = False
 
         # turn on the kinect
-        self.k4a = k4a.Device.open(id)
+        self.k4a = k4a.Device.open(device_id)
         self.config = k4a.DeviceConfiguration(color_format=k4a.EImageFormat.COLOR_BGRA32, depth_mode=k4a.EDepthMode.NFOV_UNBINNED)
         self.calibration = self.k4a.get_calibration(depth_mode=k4a.EDepthMode.NFOV_UNBINNED, color_resolution=k4a.EColorResolution.RES_720P)
         self.transform = k4a.Transformation.create(self.calibration)
@@ -171,29 +171,40 @@ class KinectDetector(object):
         pts = {}
         i = 0
         for kp in keypoints:
-            obj = np.zeros(8)
+            obj = {}
             (x, y) = (int(kp.pt[0]), int(kp.pt[1]))
             region = depth_img[y - 3: y + 4, x - 3: x + 4]
             if not np.any(region > 0):
                 continue
             depth = np.sum(region) / np.count_nonzero(region)
-            obj[:3] = np.array(self.transform.pixel_2d_to_point_3d(
+            obj["rgb_pos_3d"] = np.array(self.transform.pixel_2d_to_point_3d(
+                (kp.pt[1], kp.pt[0]),
+                depth,
+                k4a.ECalibrationType.DEPTH,
+                k4a.ECalibrationType.COLOR)) / 1000 # in meters
+            depth_pos_3d  = np.array(self.transform.pixel_2d_to_point_3d(
                 (kp.pt[1], kp.pt[0]),
                 depth,
                 k4a.ECalibrationType.DEPTH,
                 k4a.ECalibrationType.DEPTH)) / 1000 # in meters
-            if use_arm_coord:
-                obj[:3] = self.to_arm_coord(obj[:3])
-            obj[3] = kp.pt[0] - self.mask_bounding_box[1].start # x in image / mask space
-            obj[4] = kp.pt[1] - self.mask_bounding_box[0].start # y in image / mask space
-            obj[5] = depth
+            obj["depth_pos_3d"] = depth_pos_3d
+            obj["position"] = self.to_arm_coord(depth_pos_3d) if use_arm_coord else depth_pos_3d
+            obj["depth_pos_2d"] = np.array([
+                kp.pt[1], # x in image 
+                kp.pt[0], # y in image 
+                depth])
             rgb_coords = self.transform.pixel_2d_to_pixel_2d(
-                (kp.pt[0], kp.pt[1]),
+                (kp.pt[1], kp.pt[0]),
                 depth,
-                k4a.ECalibrationType.COLOR,
+                k4a.ECalibrationType.DEPTH,
                 k4a.ECalibrationType.COLOR)
-            obj[6] = rgb_coords[0] - self.rgb_mask_bounding_box[1].start # x in image / mask space
-            obj[7] = rgb_coords[1] - self.rgb_mask_bounding_box[0].start # y in image / mask space
+            rgb_x = int(rgb_coords[0] + 0.5)
+            rgb_y = int(rgb_coords[1] + 0.5)
+            obj["rgb_pos_2d"] = np.array([rgb_x, rgb_y, depth])
+            obj["mask_pos_2d"] = np.array([
+                rgb_x - self.rgb_mask_bounding_box[1].start, # x in image 
+                rgb_y - self.rgb_mask_bounding_box[0].start, # y in image 
+                depth])
             pts[i] = obj
             i = i + 1
 
@@ -203,7 +214,7 @@ class KinectDetector(object):
         return self.last_raw_color_image[self.rgb_mask_bounding_box] if crop_to_mask else self.last_raw_color_image
 
 def debug():
-    eye = KinectDetector(id=1)
+    eye = KinectDetector(device_id=1)
     while True:
         eye.detect_keypoints()
 

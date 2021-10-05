@@ -10,20 +10,19 @@ class RealScene:
                  robot: Robot,
                  obs_res,
                  cameras,
-                 detector_cam_id=None,
+                 workspace_height=0,
                  out_position=None,
-                 neutral_position=None
-                 ):
+                 neutral_position=None,
+                 detector=None):
         self.robot = robot
-        self.detector_cam_id = detector_cam_id
         self.obs_res = obs_res
         self.out_position = eval(out_position) if out_position else None
         self.neutral_position = eval(neutral_position) if neutral_position else None
-        self.detector = KinectDetector(id=detector_cam_id) if detector_cam_id else None
+        self.detector = KinectDetector(**detector) if detector else None
         self.cameras = {}
         for cam_tag, cam_def in cameras.items():
             if cam_def["type"] == "k4a":
-                self.cameras[cam_tag] = k4a.Device.open(cam_def["id"])
+                self.cameras[cam_tag] = k4a.Device.open(cam_def["device_id"])
             else:
                 raise ValueError(f'Unsupported camera type {cam_def["type"]}. ')
 
@@ -33,6 +32,7 @@ class RealScene:
             camera_fps=k4a.EFramesPerSecond.FPS_30,
             synchronized_images_only=False)
         self._world_state = None
+        self.workspace_height = workspace_height
 
     def reset(self):
         self._update_state()
