@@ -1,6 +1,9 @@
-use_sim: False
+use_sim: True
 obs_res: [84, 84]
-workspace: [3.5, 4.2, 0.5, 0.75]
+workspace: 
+  radius: [3.5, 4.2]
+  span: [0.5, 0.75] 
+  height: -0.122
 
 robot:
   arm_ip: 192.168.1.2
@@ -15,13 +18,14 @@ sim_scene:
       cameraEyePosition: [-1.0, -0.6, 0.2]
       cameraTargetPosition: [0, 0.2, 0]
       cameraUpVector: [0, 0, 1]
-      fov: 70
+      fov: 59
 
 real_scene:
-  detector_cam_id: 1
   out_position: Joints(1.571, -1.51, 1.87,-1.93,-1.571, 0)
   neutral_position: Joints(0.786, -1.51, 1.87,-1.93,-1.571, 0)
+  detector: 
+    device_id: 1
   cameras:
     cam1:
-      id: 0
+      device_id: 0
       type: k4a

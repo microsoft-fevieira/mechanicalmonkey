@@ -16,14 +16,15 @@ class StackEnv(RomanEnv):
             config = yaml.safe_load(f)
         super().__init__(StackSim, StackReal, config)
         self.action_space = Box(low=-1, high=1, shape=(3,))
-        self.workspace = config.get("workspace", [math.pi - 0.5, math.pi + 0.5, 0.25, 0.45])
-
+        
     def reset(self):
-        cube_positions = list(self.generate_random_xy(*self.workspace) + [0.025] for i in range(CUBE_COUNT))
+        
+        cube_positions = list(self.generate_random_xy(*self.workspace_radius, *self.workspace_span) + [self.workspace_height + 0.025] 
+                              for i in range(CUBE_COUNT))
         self.scene.reset(cube_positions)
         (arm_state, had_state) = self.robot.read()
         start = arm_state.tool_pose()
-        start[:2] = self.generate_random_xy(*self.workspace)
+        start[:2] = self.generate_random_xy(*self.workspace_radius, *self.workspace_span)
         self.robot.move(start, max_speed=3, max_acc=1)
         self.robot.open()
         self.robot.pinch(128)
@@ -43,12 +44,13 @@ class StackEnv(RomanEnv):
         pose = self.robot.tool_pose
         pose = Tool.from_xyzrpy(pose.to_xyzrpy() + [0.01 * dx, 0.01 * dy, 0, 0, 0, 0])
         pose[Tool.Z] = self.__z
-        self.robot.move(pose, max_speed=0.5, max_acc=2, timeout=0)
+        self.robot.move(pose, max_speed=0.1, max_acc=1, timeout=0)
 
     def __pick(self):
         back = self.robot.tool_pose
         pick_pose = back.clone()
-        pick_pose[Tool.Z] = GRASP_HEIGHT
+        pick_pose[Tool.Z] = self.workspace_height + GRASP_HEIGHT
+        self.robot.open()
         self.robot.move(pick_pose)
         self.robot.pinch()
         self.robot.move(back)
@@ -57,7 +59,7 @@ class StackEnv(RomanEnv):
     def __place(self):
         back = self.robot.tool_pose
         stack_pose = back.clone()
-        stack_pose[Tool.Z] = GRASP_HEIGHT
+        stack_pose[Tool.Z] = self.workspace_height + GRASP_HEIGHT
         self.robot.touch(stack_pose)
-        self.robot.release(128)
+        self.robot.release()
         self.robot.move(back, max_speed=2, max_acc=1)

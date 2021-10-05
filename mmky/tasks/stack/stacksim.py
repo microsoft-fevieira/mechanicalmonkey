@@ -1,8 +1,8 @@
 from mmky import SimScene
 
 class StackSim(SimScene):
-    def __init__(self, robot, obs_res, cube_size=0.05, cameras={}):
-        super().__init__(robot, obs_res, cameras)
+    def __init__(self, robot, obs_res, workspace_height=0, cube_size=0.05, cameras={}):
+        super().__init__(robot, obs_res, workspace_height, cameras)
         self.cube_size = cube_size
 
     def reset(self, cube_poses):
