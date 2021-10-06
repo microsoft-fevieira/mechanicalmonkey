@@ -19,7 +19,7 @@ sim_scene:
   ball_radius: 0.02
   cameras:
     cam1:
-      cameraEyePosition: [-1.0, -0.6, 0.2]
+      cameraEyePosition: [-1.35, -0.85, 0.80]
       cameraTargetPosition: [0, 0.2, 0]
       cameraUpVector: [0, 0, 1]
       fov: 59

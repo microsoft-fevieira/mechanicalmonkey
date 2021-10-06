@@ -119,9 +119,9 @@ class KinectDetector(object):
 
     def get_visual_target(self):
         # pick one target at random
-        kps = self.detect_keypoints()
-        i = random.randint(0, len(kps) - 1)
-        return self.to_arm_coord(kps[i])
+        objs = self.detect_keypoints(use_arm_coord=True)
+        i = random.randint(0, len(objs) - 1)
+        return objs[i]["position"]
 
     def to_arm_coord(self, point):
         # pick one target at random
