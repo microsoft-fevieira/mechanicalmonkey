@@ -53,15 +53,16 @@ class PourSim(SimScene):
 
     def reset(self, source_cup_pos, target_cup_pos):
         self.cup_position = np.array(source_cup_pos)
-        self.target_cup_position = np.array(target_cup_pos) 
+        self.target_cup_position = np.array(target_cup_pos)
         return super().reset()
 
-    def setup_scene(self):    
-        super().setup_scene()  
+    def setup_scene(self):
+        super().setup_scene()
+        self.make_ball(0.01, self.target_cup_position+[0, 0, 0.1])
         self.target_cup_size = np.array(CUPMODELS[TARGET_CUP_MODEL][1])
         self.target_cup = self._load_target_cup(self.target_cup_position, p.getQuaternionFromEuler([0, 0, math.pi * random.random()]))
 
-        
+
         scale = 0.75 + 0.5 * random.random() if self.rand_size else 1
         orientation = p.getQuaternionFromEuler([0, 0, (random.random() - 0.5) * math.pi * 4])
         (self.cup, self.cup_name, self.cup_size) = self._load_any_cup(self.cup_position,
@@ -108,8 +109,8 @@ class PourSim(SimScene):
 
         return {"poured": in_target_cup, "remaining": len(self.balls) - in_target_cup - spilled, "spilled": spilled}
 
-    def get_world_state(self):
-        ws = super().get_world_state()
+    def get_world_state(self, force_state_refresh=False):
+        ws = super().get_world_state(force_state_refresh)
         ws["ball_data"] = self.get_ball_counts()
         return ws
 
