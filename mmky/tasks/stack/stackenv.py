@@ -19,32 +19,38 @@ class StackEnv(RomanEnv):
         
     def reset(self):
         
-        cube_positions = list(self.generate_random_xy(*self.workspace_radius, *self.workspace_span) + [self.workspace_height + 0.025] 
+        cube_positions = list(self.generate_random_xy(*self.workspace_span, *self.workspace_radius) + [self.workspace_height + 0.025] 
                               for i in range(CUBE_COUNT))
         self.scene.reset(cube_positions)
         (arm_state, had_state) = self.robot.read()
         start = arm_state.tool_pose()
-        start[:2] = self.generate_random_xy(*self.workspace_radius, *self.workspace_span)
+        start[:2] = self.generate_random_xy(*self.workspace_span, *self.workspace_radius)
         self.robot.move(start, max_speed=3, max_acc=1)
         self.robot.open()
         self.robot.pinch(128)
         self.robot.active_force_limit = (None, None)
         self.__z = self.robot.tool_pose[Tool.Z]
-        return self._observe()
+        obs = self._observe()
+        assert(len(obs["world"]) == 2)
+        return obs
+
+    def _reward(self, obs):
+        return CUBE_COUNT - len(obs["world"]) # TODO: include a stack height check
 
     def _act(self, action):
         if action[2] == -1:
-            self.__place()
+            return self.__place()
         elif action[2] == 1:
-            self.__pick()
+            return self.__pick()
         else:
-            self.__move(*action[:2])
+            return self.__move(*action[:2])
 
     def __move(self, dx, dy):
         pose = self.robot.tool_pose
         pose = Tool.from_xyzrpy(pose.to_xyzrpy() + [0.01 * dx, 0.01 * dy, 0, 0, 0, 0])
         pose[Tool.Z] = self.__z
         self.robot.move(pose, max_speed=0.1, max_acc=1, timeout=0)
+        return False
 
     def __pick(self):
         back = self.robot.tool_pose
@@ -55,6 +61,7 @@ class StackEnv(RomanEnv):
         self.robot.pinch()
         self.robot.move(back)
         self.__has_object = self.robot.has_object
+        return False
 
     def __place(self):
         back = self.robot.tool_pose
@@ -63,3 +70,4 @@ class StackEnv(RomanEnv):
         self.robot.touch(stack_pose)
         self.robot.release()
         self.robot.move(back, max_speed=2, max_acc=1)
+        return True

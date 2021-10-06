@@ -15,3 +15,5 @@ class SimScene(roman.SimScene):
         for cam_id, cam_def in self.cameras.items():
             self.create_camera(img_res=self.obs_res, tag=cam_id, **cam_def)
         
+    def get_world_state(self, force_state_refresh=False):
+        return super().get_world_state()

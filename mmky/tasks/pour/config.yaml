@@ -1,8 +1,9 @@
 use_sim: True
-obs_res: [84, 84]
+obs_res: [224, 224]
+render_mode: human
 workspace: 
-  radius: [3.5, 4.2]
-  span: [0.65, 0.75] 
+  radius: [0.5, 0.75] 
+  span: [3.5, 4.2]
   height: -0.122
 
 robot:
@@ -24,7 +25,7 @@ sim_scene:
       fov: 59
 
 real_scene:
-  out_position: Joints(1.28, -1.692 , 2.635, -0.943, 1.57 ,-0.262)
+  out_position: Joints(1.28, -1.78, 2.60, -0.82, 1.59, -0.26)
   neutral_position: None
   detector: 
     device_id: 1

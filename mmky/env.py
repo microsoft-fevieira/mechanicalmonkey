@@ -22,6 +22,7 @@ class RomanEnv(gym.Env):
         robot_config = config.get("robot", {})
         self.robot = Robot(use_sim=use_sim, config=robot_config).connect()
         self.obs_res = config.get("obs_res", (84, 84))
+        self.render_mode = config.get("render_mode", None)
         ws = config.get("workspace", {"radius": [3.5, 4.2], "span": [0.5, 0.75], "height": 0})
         self.workspace_radius, self.workspace_span, self.workspace_height = ws.values()
         scene_fn, scene_cfg = (simscenefn, "sim_scene") if use_sim else (realscenefn, "real_scene")
@@ -59,10 +60,11 @@ class RomanEnv(gym.Env):
         return self._observe()
 
     def step(self, action):
-        self._act(action)
-        obs = self._observe()
+        force_state_refresh = self._act(action)
+        obs = self._observe(force_state_refresh)
         rew = self._reward(obs)
         done = self._done(obs)
+        self.render(self.render_mode)
         return obs, rew, done, {}
 
     def render(self, mode='human'):
@@ -73,11 +75,11 @@ class RomanEnv(gym.Env):
             cv2.imshow("camera observation", img)
             cv2.waitKey(1)
 
-    def _observe(self):
+    def _observe(self, force_state_refresh=False):
         arm_state, hand_state = self.robot.last_state()
         last_arm_cmd, last_hand_cmd = self.robot.last_command()
         images = self.scene.get_camera_images()
-        world = self.scene.get_world_state()
+        world = self.scene.get_world_state(force_state_refresh)
         self._last_state = {
             "cameras": images,
             "world": world,
@@ -89,6 +91,7 @@ class RomanEnv(gym.Env):
 
     def _act(self, action):
         self.robot.execute(action[0], action[1])
+        return False
 
     def _reward(self, obs):
         return 0

@@ -11,3 +11,5 @@ class StackSim(SimScene):
         for i in range(len(cube_poses)):
             self.make_box(size, cube_poses[i], color=(0.8, 0.2, 0.2, 1), mass=0.1, tag=i)
 
+        return self.get_world_state()
+

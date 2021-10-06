@@ -1,4 +1,5 @@
 from mmky.tasks.pour.pourenv import PourEnv
+import math
 import random
 
 class PourExpert:
@@ -24,12 +25,17 @@ class PourExpert:
 
         # move to the second cup
         current = obs["arm_state"].tool_pose()[:2]
-        tx, ty = obs["world"]["source"]["position"][:2]
-        tx, ty = self.env.shift(tx, ty, 0.04, -0.1)
-        self.move(current, self.env.pour_pos)
+        tx, ty = obs["world"]["target"]["position"][:2]
+
+        sign = 1
+        if math.atan2(current[1], current[0]) < math.atan2(ty, tx):
+            # counter-clockwise rotation in the third quadrant
+            sign = -1
+        tx, ty = self.env.shift(tx, ty, 0, 0.1 * sign)
+        self.move(current, [tx, ty])
 
         # pour
-        self.env.step([0, 0, -1])
+        self.env.step([0, 0, 1 * sign])
 
         # verfy success
         #verify()

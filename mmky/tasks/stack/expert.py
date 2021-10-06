@@ -20,16 +20,14 @@ class StackExpert:
     def stack(self):
         obs = self.env.reset()
         objects = obs["world"]
-        home_pose = obs["arm_state"].tool_pose()
-
         # pick a random cube as the target
-        target_id, source_id = random.sample(objects.keys(), k=2)
+        target_id, source_id = random.sample(obs["world"].keys(), k=2)
 
         # get the cube
+        home_pose = obs["arm_state"].tool_pose()
         current = home_pose[:2]
         source = objects[source_id]["position"][:2]
         self.move(current, source)
-
         obs, _, _, _ = self.env.step([0, 0, 1]) # pick
 
         # place at target location
@@ -37,8 +35,8 @@ class StackExpert:
         target = objects[target_id]["position"][:2]
         self.move(current, target)
 
-        obs, _, _, _ = self.env.step([0, 0, -1]) # place
-
+        obs, rew, _, _ = self.env.step([0, 0, -1]) # place
+        print(rew)
 
 if __name__ == '__main__':
     env = StackEnv()

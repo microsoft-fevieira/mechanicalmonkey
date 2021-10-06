@@ -33,6 +33,7 @@ class PourSim(SimScene):
     def __init__(self,
                  robot,
                  obs_res,
+                 workspace_height,
                  ball_count=3,
                  cup_size=0.10,
                  ball_radius=0.02,
@@ -41,7 +42,7 @@ class PourSim(SimScene):
                  rand_mesh=False,
                  rand_light=False,
                  cameras={}):
-        super().__init__(robot=robot, obs_res=obs_res, cameras=cameras)
+        super().__init__(robot=robot, obs_res=obs_res, cameras=cameras, workspace_height=workspace_height)
         self.cup_size = cup_size
         self.ball_radius = ball_radius
         self.rand_size = rand_size
@@ -51,13 +52,16 @@ class PourSim(SimScene):
         self.rand_light = rand_light
 
     def reset(self, source_cup_pos, target_cup_pos):
-        super().reset()
+        self.cup_position = np.array(source_cup_pos)
+        self.target_cup_position = np.array(target_cup_pos) 
+        return super().reset()
 
-        self.target_cup_position = np.array(target_cup_pos)
+    def setup_scene(self):    
+        super().setup_scene()  
         self.target_cup_size = np.array(CUPMODELS[TARGET_CUP_MODEL][1])
         self.target_cup = self._load_target_cup(self.target_cup_position, p.getQuaternionFromEuler([0, 0, math.pi * random.random()]))
 
-        self.cup_position = np.array(source_cup_pos)
+        
         scale = 0.75 + 0.5 * random.random() if self.rand_size else 1
         orientation = p.getQuaternionFromEuler([0, 0, (random.random() - 0.5) * math.pi * 4])
         (self.cup, self.cup_name, self.cup_size) = self._load_any_cup(self.cup_position,
@@ -77,6 +81,8 @@ class PourSim(SimScene):
             # let the ball fall in the cup, so we can create another one at the same position
             for i in range(5):
                 p.stepSimulation()
+
+        return self.get_world_state()
 
     def get_ball_counts(self):
         spilled = 0

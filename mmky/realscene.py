@@ -35,8 +35,7 @@ class RealScene:
         self.workspace_height = workspace_height
 
     def reset(self):
-        self._update_state()
-        return self._world_state
+        return self.get_world_state(True)
 
     def connect(self):
         self.__start_cameras()
@@ -65,13 +64,15 @@ class RealScene:
     def get_camera_images(self):
         return list(self.get_camera_image(id) for id in self.cameras.keys())
 
-    def get_world_state(self):
-        return self._world_state
+    def get_world_state(self, force_state_refresh):
+        if force_state_refresh:
+            self._update_state()
+        return self._world_state    
 
     def _update_state(self):
         if not self.detector:
             return
-
+        back = self.robot.tool_pose
         if self.neutral_position:
             self.robot.move(self.neutral_position, max_speed=3, max_acc=1)
         if self.out_position:
@@ -83,7 +84,8 @@ class RealScene:
         self.__start_cameras()
         if self.neutral_position:
             self.robot.move(self.neutral_position, max_speed=3, max_acc=1)
-
+        self.robot.move(back, max_speed=3, max_acc=1)
+        
     def __start_cameras(self):
         for cam in self.cameras.values():
             cam.start_cameras(self.k4a_config)
