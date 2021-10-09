@@ -1,6 +1,7 @@
 import math
 import random
 import numpy as np
+import os
 import pybullet as p
 from mmky import SimScene
 
