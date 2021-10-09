@@ -1,7 +1,5 @@
 from mmky.tasks.stack.stackenv import StackEnv
-from roman import Robot, Tool
 import random
-import numpy as np
 
 class StackExpert:
     def __init__(self, env: StackEnv):
@@ -16,36 +14,29 @@ class StackExpert:
             y = 0 if abs(delta[1]) < 0.002 else 1 if delta[1] > 0 else -1
             obs, _, _, _ = self.env.step([x, y, 0])
             current = obs["arm_state"].tool_pose()[:2]
-        self.env.step([0, 0, 0])
+        for i in range(10):
+            self.env.step([0, 0, 0])
 
     def stack(self):
         obs = self.env.reset()
         objects = obs["world"]
-        home_pose = obs["arm_state"].tool_pose()
-
         # pick a random cube as the target
-        target_id, source_id = random.sample(objects.keys(), k=2)
+        target_id, source_id = random.sample(obs["world"].keys(), k=2)
 
         # get the cube
+        home_pose = obs["arm_state"].tool_pose()
         current = home_pose[:2]
-        source = objects[source_id][:2]
+        source = objects[source_id]["position"][:2]
         self.move(current, source)
-
         obs, _, _, _ = self.env.step([0, 0, 1]) # pick
 
         # place at target location
         current = obs["arm_state"].tool_pose()[:2]
-        target = objects[target_id][:2]
+        target = objects[target_id]["position"][:2]
         self.move(current, target)
-        
-        obs, _, _, _ = self.env.step([0, 0, -1]) # place
 
-        # verfy success
-        #verify()
-
-        # reset the scene
-
-        #reset()
+        obs, rew, _, _ = self.env.step([0, 0, -1]) # place
+        print(rew)
 
 if __name__ == '__main__':
     env = StackEnv()

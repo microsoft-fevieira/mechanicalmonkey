@@ -19,12 +19,16 @@ class RomanEnv(gym.Env):
         super().__init__()
         self.config = config
         use_sim = config.get("use_sim", True)
-        robot_config = config.get("robot_config", {})
-        self.robot = Robot(use_sim=use_sim, **robot_config).connect()
+        robot_config = config.get("robot", {})
+        self.robot = Robot(use_sim=use_sim, config=robot_config).connect()
         self.obs_res = config.get("obs_res", (84, 84))
+        self.render_mode = config.get("render_mode", None)
+        ws = config.get("workspace", {"radius": [3.5, 4.2], "span": [0.5, 0.75], "height": 0})
+        self.workspace_radius, self.workspace_span, self.workspace_height = ws.values()
         scene_fn, scene_cfg = (simscenefn, "sim_scene") if use_sim else (realscenefn, "real_scene")
         scene_config = config.get(scene_cfg, {})
-        self.scene = scene_fn(robot=self.robot, obs_res=self.obs_res, **scene_config).connect()
+        self.scene = scene_fn(robot=self.robot, obs_res=self.obs_res, workspace_height=self.workspace_height, **scene_config).connect()
+        self.max_steps = config.get("max_steps", -1)
 
         camera_count = self.scene.get_camera_count()
         self.observation_space = Dict({
@@ -51,15 +55,20 @@ class RomanEnv(gym.Env):
         random.seed(seed)
         torch.manual_seed(seed)
 
-    def reset(self):
-        self.scene.reset()
+    def reset(self, **kwargs):
+        self.scene.reset(**kwargs)
+        self.step_count = 0
+        self.total_reward = 0
         return self._observe()
 
     def step(self, action):
-        self._act(action)
-        obs = self._observe()
+        force_state_refresh = self._act(action)
+        obs = self._observe(force_state_refresh)
         rew = self._reward(obs)
         done = self._done(obs)
+        self.render(self.render_mode)
+        self.step_count += 1
+        self.total_reward += rew
         return obs, rew, done, {}
 
     def render(self, mode='human'):
@@ -70,32 +79,33 @@ class RomanEnv(gym.Env):
             cv2.imshow("camera observation", img)
             cv2.waitKey(1)
 
-    def _observe(self):
+    def _observe(self, force_state_refresh=False):
         arm_state, hand_state = self.robot.last_state()
         last_arm_cmd, last_hand_cmd = self.robot.last_command()
         images = self.scene.get_camera_images()
-        world = self.scene.get_world_state()
+        world = self.scene.get_world_state(force_state_refresh)
         self._last_state = {
-                "cameras": images,
-                "world": world,
-                "arm_state": arm_state,
-                "hand_state": hand_state,
-                "last_arm_cmd": last_arm_cmd,
-                "last_hand_cmd": last_hand_cmd}
+            "cameras": images,
+            "world": world,
+            "arm_state": arm_state,
+            "hand_state": hand_state,
+            "last_arm_cmd": last_arm_cmd,
+            "last_hand_cmd": last_hand_cmd}
         return self._last_state
 
     def _act(self, action):
         self.robot.execute(action[0], action[1])
+        return False
 
     def _reward(self, obs):
         return 0
 
     def _done(self, obs):
-        return False
+        return self.step_count == self.max_steps
 
     @staticmethod
     def generate_random_xy(min_angle_in_rad, max_angle_in_rad, min_dist, max_dist):
         # Sample a random distance from the coordinate origin (i.e., arm base) and a random angle.
         dist = min_dist + random.random() * (max_dist - min_dist)
         angle = min_angle_in_rad + random.random() * (max_angle_in_rad - min_angle_in_rad)
-        return dist * math.cos(angle), dist * math.sin(angle)
+        return [dist * math.cos(angle), dist * math.sin(angle)]

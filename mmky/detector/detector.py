@@ -7,28 +7,37 @@ import math
 import time
 import random
 
-DEFAULT_KINECT_ID = 0
+DEFAULT_KINECT_ID = 1
 
 class KinectDetector(object):
 
-    def __init__(self, id=DEFAULT_KINECT_ID, cam2arm_file="cam2arm.csv", reset_bkground=False, datadir="data"):
+    def __init__(self, device_id=DEFAULT_KINECT_ID, cam2arm_file="cam2arm.csv", reset_bkground=False, datadir="data", blob_detector={}, show_debug_view=False):
         # set up the detector
         params = cv2.SimpleBlobDetector_Params()
-        params.filterByColor = False
-        params.filterByArea = True
-        params.minArea = 50  # The dot in 20pt font has area of about 30
-        params.maxArea = 900
-        params.filterByCircularity = False
-        params.filterByConvexity = True
-        params.filterByInertia = False
-        params.minThreshold = 80
-        params.maxThreshold = 255
-        params.thresholdStep = 10
+        params.filterByColor = blob_detector.get("filterByColor", False)
+        params.filterByArea = blob_detector.get("filterByArea", True)
+        params.minArea = blob_detector.get("minArea", 25)  # The dot in 20pt font has area of about 30
+        params.maxArea = blob_detector.get("minArea", 900)
+        params.filterByCircularity = blob_detector.get("filterByCircularity", True)
+        params.maxCircularity = blob_detector.get("maxCircularity", 1)  
+        params.minCircularity = blob_detector.get("minCircularity", 0.6)
+        params.filterByConvexity = blob_detector.get("filterByConvexity", True)
+        params.maxConvexity = blob_detector.get("maxConvexity", 1)
+        params.minConvexity = blob_detector.get("minConvexity", 0.8)  
+        params.filterByInertia = blob_detector.get("filterByInertia", False)
+        params.minThreshold = blob_detector.get("maxInertiaRatio", 1)
+        params.maxThreshold = blob_detector.get("minInertiaRatio", 0.5)
+        params.minThreshold = blob_detector.get("minThreshold", 40)
+        params.maxThreshold = blob_detector.get("maxThreshold", 256)
+        params.thresholdStep = blob_detector.get("thresholdStep", 10)
+        params.thresholdStep = blob_detector.get("minDistBetweenBlobs", 5)
+
         self.detector = cv2.SimpleBlobDetector_create(params)
         self.__started = False
+        self.show_debug_view = show_debug_view
 
         # turn on the kinect
-        self.k4a = k4a.Device.open(id)
+        self.k4a = k4a.Device.open(device_id)
         self.config = k4a.DeviceConfiguration(color_format=k4a.EImageFormat.COLOR_BGRA32, depth_mode=k4a.EDepthMode.NFOV_UNBINNED)
         self.calibration = self.k4a.get_calibration(depth_mode=k4a.EDepthMode.NFOV_UNBINNED, color_resolution=k4a.EColorResolution.RES_720P)
         self.transform = k4a.Transformation.create(self.calibration)
@@ -110,9 +119,9 @@ class KinectDetector(object):
 
     def get_visual_target(self):
         # pick one target at random
-        kps = self.detect_keypoints()
-        i = random.randint(0, len(kps) - 1)
-        return self.to_arm_coord(kps[i])
+        objs = self.detect_keypoints(use_arm_coord=True)
+        i = random.randint(0, len(objs) - 1)
+        return objs[i]["position"]
 
     def to_arm_coord(self, point):
         # pick one target at random
@@ -140,9 +149,8 @@ class KinectDetector(object):
             # subtract background
             objects = self.background.astype(int) - np.where(depth_img < 2500, depth_img, 0)
             objects = np.where(self.mask, objects, 0)
-            objects = np.where(objects > 5, objects, 0)
-            objects = np.where(objects < 50, objects, 50)
-            img = (objects * 5).astype(np.uint8)
+            objects = np.where(objects > 0, objects, 0)
+            img = (np.where(objects < 50, objects, 50) * 5).astype(np.uint8)
 
             keypoints = self.detector.detect(img)
             for kp in keypoints:
@@ -151,59 +159,82 @@ class KinectDetector(object):
                 if np.any(depth_img[x - 3: x + 4, y - 3: y + 4] > 0):
                     found = found + 1
 
-            if found == 0:
-                cv2.imshow("Keypoints", img)
-                key = cv2.waitKey(1)
-
         self.last_processed_depth_image = img
         self.last_raw_depth_image = depth_img
         self.last_raw_color_image = color_img
 
-        # Draw detected blobs as red circles.
-        # cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS ensures the size of the circle corresponds to the size of blob
-        im_with_keypoints = cv2.drawKeypoints(self.last_processed_depth_image, keypoints, np.array([]), (0, 0, 255),
-                                              cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
-        cv2.imshow("Keypoints", im_with_keypoints)
-        cv2.imshow("workspace", self.last_raw_color_image)
-        cv2.imshow("rgb crop", self.get_last_image())
-        cv2.waitKey(1)
-
         pts = {}
         i = 0
         for kp in keypoints:
-            obj = np.zeros(8)
+            obj = {}
             (x, y) = (int(kp.pt[0]), int(kp.pt[1]))
+            radius = int(kp.size/2)
+            if self.show_debug_view:
+                img[y - radius: y + radius, x - radius: x + radius] += 50
+            
             region = depth_img[y - 3: y + 4, x - 3: x + 4]
             if not np.any(region > 0):
                 continue
             depth = np.sum(region) / np.count_nonzero(region)
-            obj[:3] = np.array(self.transform.pixel_2d_to_point_3d(
+            obj["rgb_pos_3d"] = np.array(self.transform.pixel_2d_to_point_3d(
+                (kp.pt[1], kp.pt[0]),
+                depth,
+                k4a.ECalibrationType.DEPTH,
+                k4a.ECalibrationType.COLOR)) / 1000 # in meters
+            depth_pos_3d = np.array(self.transform.pixel_2d_to_point_3d(
                 (kp.pt[1], kp.pt[0]),
                 depth,
                 k4a.ECalibrationType.DEPTH,
                 k4a.ECalibrationType.DEPTH)) / 1000 # in meters
-            if use_arm_coord:
-                obj[:3] = self.to_arm_coord(obj[:3])
-            obj[3] = kp.pt[0] - self.mask_bounding_box[1].start # x in image / mask space
-            obj[4] = kp.pt[1] - self.mask_bounding_box[0].start # y in image / mask space
-            obj[5] = depth
-            rgb_coords = self.transform.pixel_2d_to_pixel_2d(
-                (kp.pt[0], kp.pt[1]),
+            depth_pos_3d_delta = np.array(self.transform.pixel_2d_to_point_3d(
+                (kp.pt[1] + radius, kp.pt[0] + radius),
                 depth,
-                k4a.ECalibrationType.COLOR,
+                k4a.ECalibrationType.DEPTH,
+                k4a.ECalibrationType.DEPTH)) / 1000 # in meters
+            obj["depth_pos_3d"] = depth_pos_3d
+            obj["position"] = self.to_arm_coord(depth_pos_3d) if use_arm_coord else depth_pos_3d
+            obj["elevation"] = objects[y-radius:y+radius, x-radius:x+radius] / 1000.
+            obj["size"] = np.abs(depth_pos_3d - depth_pos_3d_delta) * 2
+            obj["size"][2] = np.max(obj["elevation"])
+            obj["depth_pos_2d"] = np.array([
+                kp.pt[1], # x in image 
+                kp.pt[0], # y in image 
+                depth])
+            rgb_coords = self.transform.pixel_2d_to_pixel_2d(
+                (kp.pt[0], kp.pt[1]), # TODO fix (see detector branch). Coords are all over the place
+                depth,
+                k4a.ECalibrationType.DEPTH,
                 k4a.ECalibrationType.COLOR)
-            obj[6] = rgb_coords[0] - self.rgb_mask_bounding_box[1].start # x in image / mask space
-            obj[7] = rgb_coords[1] - self.rgb_mask_bounding_box[0].start # y in image / mask space
+            rgb_x = int(rgb_coords[0] + 0.5)
+            rgb_y = int(rgb_coords[1] + 0.5)
+            obj["rgb_pos_2d"] = np.array([rgb_x, rgb_y, depth])
+            obj["img"] = color_img[rgb_y-radius:rgb_y+radius, rgb_x-radius:rgb_x+radius]
+            obj["color"] = color_img[rgb_y, rgb_x]
+            if self.show_debug_view:
+                color_img[rgb_y-radius:rgb_y+radius, rgb_x-radius:rgb_x+radius] += np.array([50, 50, 50, 0], dtype=np.uint8)
+            obj["mask_pos_2d"] = np.array([
+                rgb_x - self.rgb_mask_bounding_box[1].start, # x in image 
+                rgb_y - self.rgb_mask_bounding_box[0].start, # y in image 
+                depth])
             pts[i] = obj
             i = i + 1
 
+        if self.show_debug_view:
+            cv2.imshow("workspace", self.get_last_image())
+            cv2.imshow("rgb", color_img)
+
+        # Draw detected blobs as red circles.
+        # cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS ensures the size of the circle corresponds to the size of blob
+        im_with_keypoints = cv2.drawKeypoints(img, keypoints, np.array([]), (0, 0, 255), cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+        cv2.imshow("Keypoints", im_with_keypoints)
+        cv2.waitKey(1)
         return pts
 
     def get_last_image(self, crop_to_mask=True):
         return self.last_raw_color_image[self.rgb_mask_bounding_box] if crop_to_mask else self.last_raw_color_image
 
 def debug():
-    eye = KinectDetector(id=1)
+    eye = KinectDetector(device_id=1, show_debug_view=True)
     while True:
         eye.detect_keypoints()
 
