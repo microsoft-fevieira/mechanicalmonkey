@@ -5,7 +5,7 @@ from gym.spaces import Box
 import numpy as np
 import yaml
 
-from roman import Tool, Joints, JointSpeeds
+from roman import Tool, Joints, JointSpeeds, GraspMode
 from mmky.env import RomanEnv
 from mmky.tasks.pour.poursim import PourSim
 from mmky.tasks.pour.pourreal import PourReal
@@ -34,12 +34,12 @@ class PourEnv(RomanEnv):
                                          min_dist,
                                          max_dist)
 
-        self.robot.open()
-        self.robot.pinch(128)
         obs = super().reset(source_cup_pos=[sx, sy, self.workspace_height], target_cup_pos=[tx, ty, self.workspace_height])
-        objects = obs["world"]
         self.__xyzrpy = self.robot.tool_pose.to_xyzrpy()
-
+        objects = obs["world"]
+        self.robot.open()
+        self.robot.set_hand_mode(GraspMode.NARROW)
+        self.robot.grasp(128)
         sx, sy, _ = objects["source"]["position"]
         #sx, sy = self.shift(sx, sy, 0.01, 0)
         pick_pose = self._tool_pose_from_xy(sx, sy)
@@ -95,7 +95,7 @@ class PourEnv(RomanEnv):
         pick_pose[Tool.Z] = self.workspace_height + GRASP_OFFSET
         self.robot.open()
         self.robot.move(pick_pose, max_speed=0.5, max_acc=0.5)
-        self.robot.pinch()
+        self.robot.grasp()
         self.robot.move(back, max_speed=0.5, max_acc=0.5)
         self.__has_object = self.robot.has_object
 
