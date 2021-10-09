@@ -19,13 +19,13 @@ class StackEnv(RomanEnv):
         
     def reset(self):
         
-        cube_positions = list(self.generate_random_xy(*self.workspace_span, *self.workspace_radius) + [self.workspace_height + 0.025] 
+        cube_poses = list(self.generate_random_xy(*self.workspace_span, *self.workspace_radius) + [self.workspace_height + 0.025] 
                               for i in range(CUBE_COUNT))
-        self.scene.reset(cube_positions)
+        super().reset(cube_poses=cube_poses)             
         (arm_state, had_state) = self.robot.read()
         start = arm_state.tool_pose()
         start[:2] = self.generate_random_xy(*self.workspace_span, *self.workspace_radius)
-        self.robot.move(start, max_speed=3, max_acc=1)
+        self.robot.move(start, max_speed=1, max_acc=1)
         self.robot.open()
         self.robot.pinch(128)
         self.robot.active_force_limit = (None, None)
@@ -57,9 +57,9 @@ class StackEnv(RomanEnv):
         pick_pose = back.clone()
         pick_pose[Tool.Z] = self.workspace_height + GRASP_HEIGHT
         self.robot.open()
-        self.robot.move(pick_pose)
+        self.robot.move(pick_pose, max_speed=1, max_acc=1)
         self.robot.pinch()
-        self.robot.move(back)
+        self.robot.move(back, max_speed=1, max_acc=1)
         self.__has_object = self.robot.has_object
         return False
 
@@ -69,5 +69,5 @@ class StackEnv(RomanEnv):
         stack_pose[Tool.Z] = self.workspace_height + GRASP_HEIGHT
         self.robot.touch(stack_pose)
         self.robot.release()
-        self.robot.move(back, max_speed=2, max_acc=1)
+        self.robot.move(back, max_speed=1, max_acc=1)
         return True

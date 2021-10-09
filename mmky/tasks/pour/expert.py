@@ -31,12 +31,16 @@ class PourExpert:
         if math.atan2(current[1], current[0]) < math.atan2(ty, tx):
             # counter-clockwise rotation in the third quadrant
             sign = -1
-        tx, ty = self.env.shift(tx, ty, 0, 0.1 * sign)
+        dist = obs["world"]["source"]["size"][0] / 2 + obs["world"]["target"]["size"][0] 
+        tx, ty = self.env.shift(tx, ty, 0, dist * sign) # assume the arc is about the same length as the chord (dist)
         self.move(current, [tx, ty])
 
         # pour
-        self.env.step([0, 0, 1 * sign])
-
+        target = obs["arm_state"].joint_positions()[5] + sign * 3 * math.pi / 5
+        while abs(obs["arm_state"].joint_positions()[5] - target) > 0.01:
+            obs, rew, done, _ = self.env.step([0, 0, sign])
+        print(self.env.step_count)
+        print(self.env.total_reward)
         # verfy success
         #verify()
 

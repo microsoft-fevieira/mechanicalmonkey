@@ -11,7 +11,7 @@ class SimScene(roman.SimScene):
         self.workspace_height = workspace_height
 
     def setup_scene(self):
-        self.make_table(self.workspace_height)
+        self.make_table(self.workspace_height, lateralFriction=0.1)
         for cam_id, cam_def in self.cameras.items():
             self.create_camera(img_res=self.obs_res, tag=cam_id, **cam_def)
         

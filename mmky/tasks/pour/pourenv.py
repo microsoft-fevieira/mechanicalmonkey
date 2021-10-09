@@ -20,6 +20,7 @@ class PourEnv(RomanEnv):
         self.action_space = Box(low=-1, high=1, shape=(3,))
 
     def reset(self):
+        self.last_reward = 0
         min_angle_in_rad, max_angle_in_rad = self.workspace_span
         min_dist, max_dist = self.workspace_radius
 
@@ -35,27 +36,30 @@ class PourEnv(RomanEnv):
 
         self.robot.open()
         self.robot.pinch(128)
-        objects = self.scene.reset([sx, sy, self.workspace_height], [tx, ty, self.workspace_height])
+        obs = super().reset(source_cup_pos=[sx, sy, self.workspace_height], target_cup_pos=[tx, ty, self.workspace_height])
+        objects = obs["world"]
         self.__xyzrpy = self.robot.tool_pose.to_xyzrpy()
 
         sx, sy, _ = objects["source"]["position"]
         #sx, sy = self.shift(sx, sy, 0.01, 0)
         pick_pose = self._tool_pose_from_xy(sx, sy)
-        self.robot.move(pick_pose, max_speed=1, max_acc=1)
+        self.robot.move(pick_pose, max_speed=0.5, max_acc=0.5)
         self.__pick()
 
         x, y = self.generate_random_xy(*self.workspace_span, *self.workspace_radius)
         start = self._tool_pose_from_xy(x, y)
-        self.robot.move(start)
+        self.robot.move(start, max_speed=0.5, max_acc=0.5)
 
         #self.robot.active_force_limit = (None, None)
         return self._observe()
 
-    def _act(self, action):
-        if action[2] != 0:
-            self.__pour(action[2])
-        else:
-            self.__move(*action)
+    def _reward(self, obs):
+        rew = obs["world"]["ball_data"]["poured"] - self.last_reward
+        self.last_reward = obs["world"]["ball_data"]["poured"]
+        return rew
+
+    def _done(self, obs):
+        return obs["world"]["ball_data"]["remaining"] == 0 or super()._done(obs)
 
     def _tool_pose_from_xy(self, x, y):
         target = np.array(self.__xyzrpy)
@@ -72,23 +76,27 @@ class PourEnv(RomanEnv):
         y1 = r * math.sin(a)
         return x1, y1
 
-    def __move(self, dx, dy, dr):
+    def _act(self, action):
+        dx, dy, dr = action
         pose = self.robot.tool_pose
         joints = self.robot.joint_positions
-        target = self._tool_pose_from_xy(pose[Tool.X] + 0.04 * dx, pose[Tool.Y] + 0.04 * dy)
-        self.robot.move(target, max_acc=0.01, timeout=0) # get_IK
-        jtarget = self.robot.arm.state.target_joint_positions().clone() # IK solution
-        jtarget[5] = joints[5] + 0.04 * dr
-        self.robot.move(jtarget, max_speed=0.1, max_acc=1, timeout=0)
+        if dx or dy:
+            target = self._tool_pose_from_xy(pose[Tool.X] + 0.01 * dx, pose[Tool.Y] + 0.01 * dy)
+            self.robot.move(target, max_speed=0.3, max_acc=1, timeout=0) # get_IK
+            jtarget = self.robot.arm.state.target_joint_positions().clone() # IK solution
+        else:
+            jtarget = joints.clone()
+        jtarget[Joints.WRIST3] = joints[Joints.WRIST3] + 0.3 * dr
+        self.robot.move(jtarget, max_speed=0.3, max_acc=1, timeout=0)
 
     def __pick(self):
         back = self.robot.tool_pose
         pick_pose = back.clone()
         pick_pose[Tool.Z] = self.workspace_height + GRASP_OFFSET
         self.robot.open()
-        self.robot.move(pick_pose)
+        self.robot.move(pick_pose, max_speed=0.5, max_acc=0.5)
         self.robot.pinch()
-        self.robot.move(back)
+        self.robot.move(back, max_speed=0.5, max_acc=0.5)
         self.__has_object = self.robot.has_object
 
     def __place(self):
@@ -97,11 +105,5 @@ class PourEnv(RomanEnv):
         release_pose[Tool.Z] = self.workspace_height + GRASP_OFFSET
         self.robot.touch(release_pose)
         self.robot.release(128)
-        self.robot.move(back, max_speed=2, max_acc=1)
+        self.robot.move(back, max_speed=0.5, max_acc=0.5)
 
-    def __pour(self, rot):
-        back = self.robot.joint_positions
-        pour_pose = back.clone()
-        pour_pose[Joints.WRIST3] += rot * 3 * math.pi / 5
-        self.robot.move(pour_pose)
-        self.robot.move(back)

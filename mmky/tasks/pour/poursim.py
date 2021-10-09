@@ -35,7 +35,6 @@ class PourSim(SimScene):
                  obs_res,
                  workspace_height,
                  ball_count=3,
-                 cup_size=0.10,
                  ball_radius=0.02,
                  rand_size=False,
                  rand_tex=False,
@@ -43,7 +42,6 @@ class PourSim(SimScene):
                  rand_light=False,
                  cameras={}):
         super().__init__(robot=robot, obs_res=obs_res, cameras=cameras, workspace_height=workspace_height)
-        self.cup_size = cup_size
         self.ball_radius = ball_radius
         self.rand_size = rand_size
         self.rand_tex = rand_tex
@@ -58,16 +56,13 @@ class PourSim(SimScene):
 
     def setup_scene(self):
         super().setup_scene()
-        self.make_ball(0.01, self.target_cup_position+[0, 0, 0.1])
-        self.target_cup_size = np.array(CUPMODELS[TARGET_CUP_MODEL][1])
         self.target_cup = self._load_target_cup(self.target_cup_position, p.getQuaternionFromEuler([0, 0, math.pi * random.random()]))
 
 
-        scale = 0.75 + 0.5 * random.random() if self.rand_size else 1
         orientation = p.getQuaternionFromEuler([0, 0, (random.random() - 0.5) * math.pi * 4])
         (self.cup, self.cup_name, self.cup_size) = self._load_any_cup(self.cup_position,
                                                                       orientation,
-                                                                      [scale] * 3,
+                                                                      rand_size = self.rand_size,
                                                                       rand_tex=self.rand_tex,
                                                                       rand_mesh=self.rand_mesh,
                                                                       tag="source")
@@ -77,8 +72,9 @@ class PourSim(SimScene):
             self.balls[i] = self.make_ball(self.ball_radius,
                                            self.cup_position + [0, 0, CUP_BOTTOM_LIMIT + 0.05],
                                            mass=0.005,
-                                           color=[0.8, 0.8, 1, 1],
-                                           restitution=0)
+                                           color=[1, 0.75, 0.25, 1],
+                                           restitution=0,
+                                           spinningFriction=0.2)
             # let the ball fall in the cup, so we can create another one at the same position
             for i in range(5):
                 p.stepSimulation()
@@ -112,6 +108,8 @@ class PourSim(SimScene):
     def get_world_state(self, force_state_refresh=False):
         ws = super().get_world_state(force_state_refresh)
         ws["ball_data"] = self.get_ball_counts()
+        ws["target"]["size"] = np.array(self.target_cup_size)
+        ws["source"]["size"] = np.array(self.cup_size)
         return ws
 
     def is_done(self):
@@ -121,12 +119,16 @@ class PourSim(SimScene):
         ball_data = self.get_ball_counts()
         return ball_data["poured"]
 
-    def _load_any_cup(self, position, orientation, scale, rand_color=True, rand_tex=False, rand_mesh=False, tag=None):
+    def _load_any_cup(self, position, orientation, rand_size=False, rand_color=True, rand_tex=False, rand_mesh=False, tag=None):
         model = random.choice(CUPMODELS) if rand_mesh else CUPMODELS[TARGET_CUP_MODEL]
+        scale = 1
+        if rand_size:
+            scale += (random.random() - 0.5) / 2
+
         id = self._load_cup(model[0],
                             position=position,
                             orientation=orientation,
-                            scale=np.array(scale) * OBJ_MODEL_UNIT,
+                            scale=[scale * OBJ_MODEL_UNIT] * 3,
                             mass=.1,
                             rand_tex=rand_tex,
                             rand_color=rand_color,
@@ -134,7 +136,9 @@ class PourSim(SimScene):
         return (id, model[0], np.array(model[1]) * scale)
 
     def _load_target_cup(self, position=[0, 0, 0], orientation=[0, 0, 0, 1], rand_color=False, rand_tex=False):
-        return self._load_cup(CUPMODELS[TARGET_CUP_MODEL][0],
+        model = CUPMODELS[TARGET_CUP_MODEL]
+        self.target_cup_size = np.array(model[1])
+        return self._load_cup(model[0],
                               position=position,
                               orientation=orientation,
                               scale=[OBJ_MODEL_UNIT] * 3,

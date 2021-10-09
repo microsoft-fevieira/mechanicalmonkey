@@ -28,7 +28,7 @@ class RomanEnv(gym.Env):
         scene_fn, scene_cfg = (simscenefn, "sim_scene") if use_sim else (realscenefn, "real_scene")
         scene_config = config.get(scene_cfg, {})
         self.scene = scene_fn(robot=self.robot, obs_res=self.obs_res, workspace_height=self.workspace_height, **scene_config).connect()
-        
+        self.max_steps = config.get("max_steps", -1)
 
         camera_count = self.scene.get_camera_count()
         self.observation_space = Dict({
@@ -55,8 +55,10 @@ class RomanEnv(gym.Env):
         random.seed(seed)
         torch.manual_seed(seed)
 
-    def reset(self):
-        self.scene.reset()
+    def reset(self, **kwargs):
+        self.scene.reset(**kwargs)
+        self.step_count = 0
+        self.total_reward = 0
         return self._observe()
 
     def step(self, action):
@@ -65,6 +67,8 @@ class RomanEnv(gym.Env):
         rew = self._reward(obs)
         done = self._done(obs)
         self.render(self.render_mode)
+        self.step_count += 1
+        self.total_reward += rew
         return obs, rew, done, {}
 
     def render(self, mode='human'):
@@ -97,7 +101,7 @@ class RomanEnv(gym.Env):
         return 0
 
     def _done(self, obs):
-        return False
+        return self.step_count == self.max_steps
 
     @staticmethod
     def generate_random_xy(min_angle_in_rad, max_angle_in_rad, min_dist, max_dist):
