@@ -150,8 +150,8 @@ class PourSim(SimScene):
     def _load_cup(self, name, position, orientation, scale, mass, rand_color=False, rand_tex=False, tag=None):
         color = [random.random(), random.random(), random.random(), 1] if rand_color else [1, 1, 1, 1]
         tex = random.choice(self.textures) if rand_tex else None
-        mesh = "cup\\" + name + ".obj"
-        vhcad = "cup\\" + name + "_vhacd.obj"
+        mesh = os.path.join("Cup", name + ".obj")
+        vhcad = os.path.join("Cup", name + "_vhacd.obj")
         return self.load_obj(mesh_file=mesh,
                              vhacd_file=vhcad,
                              position=position,
