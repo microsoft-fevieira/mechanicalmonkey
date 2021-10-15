@@ -19,13 +19,13 @@ class PourReal(RealScene):
         self.cup_size = cup_size
         self.ball_count = ball_count
 
-    def reset(self, source_cup_pos, target_cup_pos):
+    def reset(self, **kwargs):
         # TODO move the cups to the new poses, replace the ball in a cup if needed
-        return super().reset()
+        return super().reset(**kwargs)
 
     def get_world_state(self, force_state_refresh):
         raw_state = super().get_world_state(force_state_refresh)
-        
+
         world = {}
         balls = []
         world["balls"] = balls
@@ -36,9 +36,9 @@ class PourReal(RealScene):
                 # this is a cup
                 # reset the center of the cup to workspace level
                 v["position"][2] = self.workspace_height
-                v["size"] = np.array(self.cup_size) # the size provided by the detector is quite off (particularly the height) 
+                v["size"] = np.array(self.cup_size) # the size provided by the detector is quite off (particularly the height)
 
-                # if orange, it's a source cup 
+                # if orange, it's a source cup
                 if (_is_orange(v["color"]) and not world.get("source", None)) or world.get("target", None):
                     world["source"] = v
                 else:

@@ -1,6 +1,5 @@
 import math
 import os
-from posixpath import dirname
 from gym.spaces import Box
 import numpy as np
 import yaml
@@ -21,37 +20,41 @@ class PourEnv(RomanEnv):
 
     def reset(self):
         self.last_reward = 0
-        min_angle_in_rad, max_angle_in_rad = self.workspace_span
-        min_dist, max_dist = self.workspace_radius
+        while True:
+            min_angle_in_rad, max_angle_in_rad = self.workspace_span
+            min_dist, max_dist = self.workspace_radius
 
-        sx, sy = self.generate_random_xy(min_angle_in_rad,
-                                         (max_angle_in_rad + min_angle_in_rad) / 2 - 0.1,
-                                         min_dist,
-                                         max_dist)
+            sx, sy = self.generate_random_xy(min_angle_in_rad,
+                                            (max_angle_in_rad + min_angle_in_rad) / 2 - 0.1,
+                                            min_dist,
+                                            max_dist)
 
-        tx, ty = self.generate_random_xy((max_angle_in_rad + min_angle_in_rad) / 2 + 0.1,
-                                         max_angle_in_rad,
-                                         min_dist,
-                                         max_dist)
+            tx, ty = self.generate_random_xy((max_angle_in_rad + min_angle_in_rad) / 2 + 0.1,
+                                            max_angle_in_rad,
+                                            min_dist,
+                                            max_dist)
 
-        obs = super().reset(source_cup_pos=[sx, sy, self.workspace_height], target_cup_pos=[tx, ty, self.workspace_height])
-        self.__xyzrpy = self.robot.tool_pose.to_xyzrpy()
-        objects = obs["world"]
-        self.robot.open()
-        self.robot.set_hand_mode(GraspMode.NARROW)
-        self.robot.grasp(128)
-        sx, sy, _ = objects["source"]["position"]
-        #sx, sy = self.shift(sx, sy, 0.01, 0)
-        pick_pose = self._tool_pose_from_xy(sx, sy)
-        self.robot.move(pick_pose, max_speed=0.5, max_acc=0.5)
-        self.__pick()
+            obs = super().reset(source_cup_pos=[sx, sy, self.workspace_height], target_cup_pos=[tx, ty, self.workspace_height])
+            self.__xyzrpy = self.robot.tool_pose.to_xyzrpy()
+            objects = obs["world"]
+            if not self.robot.open(timeout=2):
+                continue
+            self.robot.set_hand_mode(GraspMode.NARROW)
+            sx, sy, _ = objects["source"]["position"]
+            #sx, sy = self.shift(sx, sy, 0.01, 0)
+            pick_pose = self._tool_pose_from_xy(sx, sy)
+            if not self.robot.move(pick_pose, max_speed=0.5, max_acc=0.5, timeout=10):
+                continue
+            if not self.__pick():
+                continue
 
-        x, y = self.generate_random_xy(*self.workspace_span, *self.workspace_radius)
-        start = self._tool_pose_from_xy(x, y)
-        self.robot.move(start, max_speed=0.5, max_acc=0.5)
+            x, y = self.generate_random_xy(*self.workspace_span, *self.workspace_radius)
+            start = self._tool_pose_from_xy(x, y)
+            if not self.robot.move(start, max_speed=0.5, max_acc=0.5):
+                continue
 
-        #self.robot.active_force_limit = (None, None)
-        return self._observe()
+            #self.robot.active_force_limit = (None, None)
+            return self._observe()
 
     def _reward(self, obs):
         rew = obs["world"]["ball_data"]["poured"] - self.last_reward
@@ -82,28 +85,12 @@ class PourEnv(RomanEnv):
         joints = self.robot.joint_positions
         if dx or dy:
             target = self._tool_pose_from_xy(pose[Tool.X] + 0.01 * dx, pose[Tool.Y] + 0.01 * dy)
-            self.robot.move(target, max_speed=0.3, max_acc=1, timeout=0) # get_IK
-            jtarget = self.robot.arm.state.target_joint_positions().clone() # IK solution
+            jtarget = self.robot.get_inverse_kinematics(target)
         else:
             jtarget = joints.clone()
         jtarget[Joints.WRIST3] = joints[Joints.WRIST3] + 0.3 * dr
         self.robot.move(jtarget, max_speed=0.3, max_acc=1, timeout=0)
+        return False # force_full_obs
 
-    def __pick(self):
-        back = self.robot.tool_pose
-        pick_pose = back.clone()
-        pick_pose[Tool.Z] = self.workspace_height + GRASP_OFFSET
-        self.robot.open()
-        self.robot.move(pick_pose, max_speed=0.5, max_acc=0.5)
-        self.robot.grasp()
-        self.robot.move(back, max_speed=0.5, max_acc=0.5)
-        self.__has_object = self.robot.has_object
 
-    def __place(self):
-        back = self.robot.tool_pose
-        release_pose = back.clone()
-        release_pose[Tool.Z] = self.workspace_height + GRASP_OFFSET
-        self.robot.touch(release_pose)
-        self.robot.release(128)
-        self.robot.move(back, max_speed=0.5, max_acc=0.5)
 

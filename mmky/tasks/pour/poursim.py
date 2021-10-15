@@ -50,10 +50,10 @@ class PourSim(SimScene):
         self.ball_count = ball_count
         self.rand_light = rand_light
 
-    def reset(self, source_cup_pos, target_cup_pos):
+    def reset(self, **kwargs):
         self.cup_position = np.array(source_cup_pos)
         self.target_cup_position = np.array(target_cup_pos)
-        return super().reset()
+        return super().reset(**kwargs)
 
     def setup_scene(self):
         super().setup_scene()
