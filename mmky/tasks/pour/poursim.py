@@ -4,6 +4,7 @@ import numpy as np
 import os
 import pybullet as p
 from mmky import SimScene
+from mmky import primitives
 
 CUPMODELS = [
     # name, size in m (must match the obj file)
@@ -34,7 +35,7 @@ class PourSim(SimScene):
     def __init__(self,
                  robot,
                  obs_res,
-                 workspace_height,
+                 workspace,
                  ball_count=3,
                  ball_radius=0.02,
                  rand_size=False,
@@ -42,7 +43,7 @@ class PourSim(SimScene):
                  rand_mesh=False,
                  rand_light=False,
                  cameras={}):
-        super().__init__(robot=robot, obs_res=obs_res, cameras=cameras, workspace_height=workspace_height)
+        super().__init__(robot=robot, obs_res=obs_res, cameras=cameras, workspace=workspace)
         self.ball_radius = ball_radius
         self.rand_size = rand_size
         self.rand_tex = rand_tex
@@ -51,8 +52,22 @@ class PourSim(SimScene):
         self.rand_light = rand_light
 
     def reset(self, **kwargs):
-        self.cup_position = np.array(source_cup_pos)
-        self.target_cup_position = np.array(target_cup_pos)
+        min_angle_in_rad, max_angle_in_rad = self.workspace_span
+        min_dist, max_dist = self.workspace_radius
+
+        sx, sy = primitives.generate_random_xy(min_angle_in_rad,
+                                        (max_angle_in_rad + min_angle_in_rad) / 2 - 0.1,
+                                        min_dist,
+                                        max_dist)
+
+        tx, ty = primitives.generate_random_xy((max_angle_in_rad + min_angle_in_rad) / 2 + 0.1,
+                                        max_angle_in_rad,
+                                        min_dist,
+                                        max_dist)
+        self.cup_position = np.array([sx, sy, self.workspace_height])
+        self.target_cup_position = np.array([tx, ty, self.workspace_height])
+
+        self.robot.active_force_limit = (None, None)
         return super().reset(**kwargs)
 
     def setup_scene(self):
@@ -113,12 +128,11 @@ class PourSim(SimScene):
         ws["source"]["size"] = np.array(self.cup_size)
         return ws
 
-    def is_done(self):
-        return self.get_ball_counts()["remaining"] == 0
-
-    def reward(self):
-        ball_data = self.get_ball_counts()
-        return ball_data["poured"]
+    def eval_state(self, world_state):
+        rew = world_state["ball_data"]["poured"]
+        success = rew == self.ball_count
+        done = world_state["ball_data"]["remaining"] == 0
+        return rew, success, done
 
     def _load_any_cup(self, position, orientation, rand_size=False, rand_color=True, rand_tex=False, rand_mesh=False, tag=None):
         model = random.choice(CUPMODELS) if rand_mesh else CUPMODELS[TARGET_CUP_MODEL]
@@ -130,7 +144,7 @@ class PourSim(SimScene):
                             position=position,
                             orientation=orientation,
                             scale=[scale * OBJ_MODEL_UNIT] * 3,
-                            mass=.1,
+                            mass=.05,
                             rand_tex=rand_tex,
                             rand_color=rand_color,
                             tag=tag)
@@ -143,7 +157,7 @@ class PourSim(SimScene):
                               position=position,
                               orientation=orientation,
                               scale=[OBJ_MODEL_UNIT] * 3,
-                              mass=10,
+                              mass=1,
                               rand_tex=rand_tex,
                               rand_color=rand_color,
                               tag="target")
@@ -161,4 +175,5 @@ class PourSim(SimScene):
                              mass=mass,
                              tex=tex,
                              color=color,
-                             tag=tag)
+                             tag=tag, 
+                             restitution=0)

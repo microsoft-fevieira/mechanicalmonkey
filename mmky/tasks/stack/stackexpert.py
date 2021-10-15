@@ -11,9 +11,9 @@ MAX_SPEED = 0.5
 
 class StackingExpert(Expert):
     def __init__(self):
-        super().__init__(StackSim, StackReal, os.path.join(os.path.dirname(__file__), 'config.yaml'))
+        super().__init__("robosuite_stack", StackSim, StackReal, os.path.join(os.path.dirname(__file__), 'config.yaml'))
 
-    def stack(self, iterations=1, data_dir="trajectories"):
+    def run(self, iterations=1, data_dir="trajectories"):
         while iterations:
             self._start_episode()
 
@@ -40,9 +40,12 @@ class StackingExpert(Expert):
             if not primitives.place(self.robot, self.env.workspace_height + GRASP_HEIGHT, max_speed=MAX_SPEED, max_acc=MAX_ACC):
                 continue
 
+            # discard failed tries 
+            if not self.success:
+                continue
             self._end_episode()
-
+            iterations -= 1
 
 if __name__ == '__main__':
     exp = StackingExpert()
-    exp.stack(1000)
+    exp.run(1000)

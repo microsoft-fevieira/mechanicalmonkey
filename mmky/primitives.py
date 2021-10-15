@@ -72,6 +72,14 @@ def pivot_dxdy(robot, reference_pose: Tool, dx, dy, dr, max_speed=0.3, max_acc=1
     robot.move(jtarget, max_speed=max_speed, max_acc=max_acc, timeout=0)
     return True
 
+def add_cylindrical(x, y, dr, da):
+        r0 = math.sqrt(x * x + y * y)
+        a0 = math.atan2(y, x)
+        r = r0 + dr
+        a = a0 + da
+        x1 = r * math.cos(a)
+        y1 = r * math.sin(a)
+        return x1, y1
 
 def generate_random_xy(min_angle_in_rad, max_angle_in_rad, min_dist, max_dist):
     # Sample a random distance from the coordinate origin (i.e., arm base) and a random angle.

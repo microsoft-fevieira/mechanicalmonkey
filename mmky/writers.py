@@ -53,7 +53,7 @@ class SimpleNpyWriter(Writer):
         if discard:
             os.remove(self.file_name)
 
-class SimpleHdf5Writer(Writer):
+class RobosuiteWriter(Writer):
     def __init__(self, file_name_template, file_path="trajectories"):
         super().__init__(file_name_template, file_path)
         self.episode_data = None
@@ -61,26 +61,24 @@ class SimpleHdf5Writer(Writer):
     def start_episode(self, obs):
         super().start_episode(obs)
         self.episode_data = {}
-        for k, v in obs.items():
-            self.episode_data[k] = [v]
+        self.episode_data['images'] = []
+        self.episode_data['proprios'] = []
         self.episode_data['actions'] = []
         self.episode_data['rewards'] = []
         self.episode_data['dones'] = []
+        self.episode_data['successes'] = []
 
     def log(self, act, obs, rew, done, info):
         if not self.episode_data:
             return
 
         super().log(act, obs, rew, done, info)
-        for k, v in obs.items():
-            self.episode_data[k].append(v)
-        for k, v in info.items():
-            vals = self.episode_data.get(k, [])
-            vals.append(v)
-            self.episode_data[k] = vals
-        self.episode_data.get('actions', []).append(act)
-        self.episode_data.get('rewards', []).append(rew)
-        self.episode_data.get('dones', []).append(done)
+        self.episode_data['images'].append(obs["image"])
+        self.episode_data['proprios'].append(obs["proprio"])
+        self.episode_data['actions'].append(act)
+        self.episode_data['rewards'].append(rew)
+        self.episode_data['dones'].append(done)
+        self.episode_data['successes'].append(info["success"])
 
     def end_episode(self, discard=False):
         if not discard:

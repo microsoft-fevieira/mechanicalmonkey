@@ -13,7 +13,7 @@ robot:
   hand_ip: 192.168.1.11
   local_ip: 192.168.1.9
   local_port: 50003
-  sim.start_config: [0.5, -1.78, 2.60, -0.82, 1.59, -0.26]
+  start_config: [0.5, -1.78, 2.60, -0.82, 1.59, -0.26]
   sim.use_gui: True
 
 sim_scene:

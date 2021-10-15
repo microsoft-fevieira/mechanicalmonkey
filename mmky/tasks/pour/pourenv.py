@@ -13,48 +13,10 @@ GRASP_OFFSET = 0.07
 
 class PourEnv(RomanEnv):
     def __init__(self):
-        with open(os.path.join(os.path.dirname(__file__), 'config.yaml')) as f:
-            config = yaml.safe_load(f)
-        super().__init__(PourSim, PourReal, config)
+        super().__init__(PourSim, PourReal, os.path.join(os.path.dirname(__file__), 'config.yaml'))
         self.action_space = Box(low=-1, high=1, shape=(3,))
 
-    def reset(self):
-        self.last_reward = 0
-        while True:
-            min_angle_in_rad, max_angle_in_rad = self.workspace_span
-            min_dist, max_dist = self.workspace_radius
-
-            sx, sy = self.generate_random_xy(min_angle_in_rad,
-                                            (max_angle_in_rad + min_angle_in_rad) / 2 - 0.1,
-                                            min_dist,
-                                            max_dist)
-
-            tx, ty = self.generate_random_xy((max_angle_in_rad + min_angle_in_rad) / 2 + 0.1,
-                                            max_angle_in_rad,
-                                            min_dist,
-                                            max_dist)
-
-            obs = super().reset(source_cup_pos=[sx, sy, self.workspace_height], target_cup_pos=[tx, ty, self.workspace_height])
-            self.__xyzrpy = self.robot.tool_pose.to_xyzrpy()
-            objects = obs["world"]
-            if not self.robot.open(timeout=2):
-                continue
-            self.robot.set_hand_mode(GraspMode.NARROW)
-            sx, sy, _ = objects["source"]["position"]
-            #sx, sy = self.shift(sx, sy, 0.01, 0)
-            pick_pose = self._tool_pose_from_xy(sx, sy)
-            if not self.robot.move(pick_pose, max_speed=0.5, max_acc=0.5, timeout=10):
-                continue
-            if not self.__pick():
-                continue
-
-            x, y = self.generate_random_xy(*self.workspace_span, *self.workspace_radius)
-            start = self._tool_pose_from_xy(x, y)
-            if not self.robot.move(start, max_speed=0.5, max_acc=0.5):
-                continue
-
-            #self.robot.active_force_limit = (None, None)
-            return self._observe()
+    
 
     def _reward(self, obs):
         rew = obs["world"]["ball_data"]["poured"] - self.last_reward

@@ -1,12 +1,12 @@
 import numpy as np
 from mmky.env import RomanEnv, RoboSuiteEnv
-from mmky.writers import SimpleHdf5Writer
+from mmky.writers import RobosuiteWriter
 from roman import ur, rq
 
 class Expert:
-    def __init__(self, simscenefn, realscenefn, config):
+    def __init__(self, file_template, simscenefn, realscenefn, config):
         self.env = RomanEnv(simscenefn, realscenefn, config, log_writer=self)
-        self.writer = SimpleHdf5Writer("robosuite_stack")
+        self.writer = RobosuiteWriter(file_template)
         self.robot = self.env.robot
         self.images = None
         self.done = False
@@ -34,13 +34,14 @@ class Expert:
             if hand_cmd.kind() == rq.Command._CMD_KIND_MOVE:
                 hand_act = 2 * (hand_cmd.position() / 255 - 0.5)
 
-            act = np.zeros(7)
-            act[:6] = arm_act
-            act[6] = hand_act
+            self.proprio = proprio
+            self.act = np.zeros(7)
+            self.act[:6] = arm_act
+            self.act[6] = hand_act
             self.world = self.env._get_world_state(False)
-            obs = RomanEnv.make_observation(self.images, self.world, proprio)
-            rew, _, success = self.env._eval_state(obs)
-            obs = RoboSuiteEnv.make_observation(obs)
-            self.writer.log(act, obs, rew, self.done, {"success": success})
+            self.obs = RomanEnv.make_observation(self.images, self.world, proprio)
+            self.rew, self.success, _ = self.env._eval_state(self.obs)
+            obs = RoboSuiteEnv.make_observation(self.obs)
+            self.writer.log(self.act, obs, self.rew, self.done, {"success": self.success})
         self.images = self.env._get_camera_images()
 

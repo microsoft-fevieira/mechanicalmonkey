@@ -11,11 +11,11 @@ class PourReal(RealScene):
                  cameras,
                  cup_size,
                  ball_count,
-                 workspace_height=0,
+                 workspace,
                  out_position=None,
                  neutral_position=None,
                  detector=None):
-        super().__init__(robot, obs_res, cameras, workspace_height, out_position, neutral_position, detector)
+        super().__init__(robot, obs_res, cameras, workspace, out_position, neutral_position, detector)
         self.cup_size = cup_size
         self.ball_count = ball_count
 

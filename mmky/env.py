@@ -23,10 +23,7 @@ class RomanEnv(gym.Env):
                 config = yaml.safe_load(f)
         self.config = config
         use_sim = config.get("use_sim", True)
-        self.start_pose = config.get("start_pose", None)
-        self.start_pose = eval(self.start_pose) if self.start_pose else None
         robot_config = config.get("robot", {})
-        robot_config["sim.start_config"] = self.start_pose
         self.robot = Robot(use_sim=use_sim, config=robot_config, writer=log_writer)
         self.obs_res = config.get("obs_res", (84, 84))
         ws = config.get("workspace", {"radius": [3.5, 4.2], "span": [0.5, 0.75], "height": 0})
@@ -69,7 +66,7 @@ class RomanEnv(gym.Env):
         self.is_done = False
         self.success = False
         self.scene.reset(**kwargs)
-        self.start_pose = self.start_pose or self.robot.joint_positions
+        self.start_pose = self.robot.joint_positions
         primitives.go_to_start(self.robot, self.start_pose, self.grasp_mode)
         tool_pose = self.robot.tool_pose
         if self.random_start:
