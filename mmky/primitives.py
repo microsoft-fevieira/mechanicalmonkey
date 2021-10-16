@@ -4,23 +4,24 @@ import random
 from roman import Robot, Tool, Joints, GraspMode
 
 
-def go_to_start(robot: Robot, start_pose, grasp_mode=GraspMode.PINCH, max_speed=1, max_acc=1):
+def go_to_start(robot: Robot, start_pose, grasp_mode=GraspMode.PINCH, grasp_state=0, max_speed=1, max_acc=1):
     if not robot.move(start_pose, max_speed=max_speed, max_acc=max_acc, timeout=10):
         return False
     if not robot.release(timeout=2):
         return False
     robot.set_hand_mode(grasp_mode)
+    robot.release(grasp_state)
     return True
 
-def pick(robot, grasp_height, max_speed=1, max_acc=1, max_time=10):
+def pick(robot, grasp_height, grasp_state=0, max_speed=1, max_acc=1, max_time=10):
     back = robot.tool_pose
     pick_pose = back.clone()
     pick_pose[Tool.Z] = grasp_height
-    if not robot.open(timeout=max_time):
+    if not robot.open(position=grasp_state, speed=1, timeout=max_time):
         return False
     if not robot.move(pick_pose, max_speed=max_speed, max_acc=max_acc, timeout=max_time):
         return False
-    if not robot.grasp(timeout=max_time):
+    if not robot.grasp(timeout=max_time, speed=1):
         return False
     if not robot.move(back, max_speed=max_speed, max_acc=max_acc, timeout=max_time):
         return False

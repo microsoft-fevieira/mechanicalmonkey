@@ -46,7 +46,7 @@ class PourExpert(Expert):
 
             # pour
             target = self.robot.joint_positions + [0, 0, 0, 0, 0, sign * 3 * math.pi / 5]
-            self.robot.move(target, max_speed=MAX_SPEED, max_acc=MAX_ACC, timeout=10)
+            self.robot.move(target, max_speed=MAX_SPEED, max_acc=MAX_ACC, timeout=15)
 
             # discard failed tries 
             if not self.success:
@@ -57,4 +57,4 @@ class PourExpert(Expert):
 
 if __name__ == '__main__':
     expert = PourExpert()
-    expert.run(100)
+    expert.run(1000)

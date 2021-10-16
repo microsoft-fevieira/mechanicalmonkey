@@ -105,7 +105,7 @@ class PourSim(SimScene):
             ball_pos = np.array(p.getBasePositionAndOrientation(ball)[0])
             # in target cup?
             bpos = ball_pos - self.target_cup_position
-            if bpos[2] > 0 \
+            if bpos[2] > self.workspace_height \
                and bpos[2] < self.target_cup_size[2] \
                and math.sqrt(bpos[0] * bpos[0] + bpos[1] * bpos[1]) < self.target_cup_size[0] / 2:
                 in_target_cup = in_target_cup + 1

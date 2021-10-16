@@ -1,23 +1,23 @@
 use_sim: True
 obs_res: [84, 84]
 render_mode: human
-max_steps: 500
+max_steps: 1000
 workspace:
   radius: [0.5, 0.75]
   span: [3.5, 4.2]
   height: -0.122
-grasp_mode: GraspMode.NARROW
+grasp_mode: GraspMode.PINCH
+grasp_state: 192
 
 robot:
   arm_ip: 192.168.1.2
   hand_ip: 192.168.1.11
   local_ip: 192.168.1.9
   local_port: 50003
-  sim.start_config: [0.5, -1.78, 2.60, -0.82, 1.59, -0.26]
-  sim.use_gui: True
+  sim.start_config: [0.786, -1.571, 1.571,-1.571,-1.571, 0]
 
 sim_scene:
-  ball_radius: 0.018
+  ball_radius: 0.035
   ball_count: 2
   cameras:
     cam1:
@@ -27,10 +27,8 @@ sim_scene:
       fov: 59
 
 real_scene:
-  cup_size: [0.085, 0.085, 0.104]
-  ball_count: 2
-  out_position: Joints(1.28, -1.78, 2.60, -0.82, 1.59, -0.26)
-  neutral_position: None
+  out_position: Joints(1.571, -1.571, 1.571,-1.571,-1.571, 0)
+  neutral_position: Joints(0.786, -1.571, 1.571,-1.571,-1.571, 0)
   detector:
     device_id: 1
   cameras:

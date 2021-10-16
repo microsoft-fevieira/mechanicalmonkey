@@ -37,6 +37,7 @@ class RomanEnv(gym.Env):
         self.max_steps = config.get("max_steps", -1)
         self.grasp_mode = config.get("grasp_mode", None)
         self.grasp_mode = eval(self.grasp_mode) if self.grasp_mode else GraspMode.BASIC
+        self.grasp_state = config.get("grasp_state", 0)
         self.random_start = config.get("random_start", True)
 
         camera_count = self.scene.get_camera_count()
@@ -67,7 +68,7 @@ class RomanEnv(gym.Env):
         self.success = False
         self.scene.reset(**kwargs)
         self.start_pose = self.robot.joint_positions
-        primitives.go_to_start(self.robot, self.start_pose, self.grasp_mode)
+        primitives.go_to_start(self.robot, self.start_pose, self.grasp_mode, self.grasp_state)
         tool_pose = self.robot.tool_pose
         if self.random_start:
             tool_pose[:2] = primitives.generate_random_xy(*self.workspace_span, *self.workspace_radius)
