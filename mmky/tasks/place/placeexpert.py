@@ -1,17 +1,18 @@
-from mmky.tasks.drop.dropreal import DropReal
-from mmky.tasks.drop.dropsim import DropSim
+from mmky.tasks.place.placereal import PlaceReal
+from mmky.tasks.place.placesim import PlaceSim
 from mmky import primitives
 from mmky.expert import Expert
 import random
 import os
 
 GRASP_HEIGHT = 0.04
+CUP_HEIGHT=0.15
 MAX_ACC = 0.5
 MAX_SPEED = 0.5
 
-class DroppingExpert(Expert):
+class PlacingExpert(Expert):
     def __init__(self):
-        super().__init__("robosuite_drop", DropSim, DropReal, os.path.join(os.path.dirname(__file__), 'config.yaml'))
+        super().__init__("robosuite_place", PlaceSim, PlaceReal, os.path.join(os.path.dirname(__file__), 'config.yaml'))
 
     def run(self, iterations=1, data_dir="trajectories"):
         while iterations:
@@ -33,8 +34,9 @@ class DroppingExpert(Expert):
             if not self.robot.move(target, timeout=10, max_speed=MAX_SPEED, max_acc=MAX_ACC):
                 continue
 
-            # drop the object
-            self.robot.release(timeout=2)
+            # place the cube
+            if not primitives.place(self.robot, self.env.workspace_height + CUP_HEIGHT, max_speed=MAX_SPEED, max_acc=MAX_ACC):
+                continue
 
             # discard failed tries 
             if not self.success:
@@ -43,5 +45,5 @@ class DroppingExpert(Expert):
             iterations -= 1
 
 if __name__ == '__main__':
-    exp = DroppingExpert()
+    exp = PlacingExpert()
     exp.run(100)

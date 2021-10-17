@@ -18,6 +18,7 @@ robot:
 
 sim_scene:
   obj_size: 0.04
+  obj_kind: "ball"
   cameras:
     cam1:
       cameraEyePosition: [-1.0, -0.8, 0.40]

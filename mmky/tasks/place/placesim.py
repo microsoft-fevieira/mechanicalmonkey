@@ -1,10 +1,11 @@
 import math
 import numpy as np
 import os
+import pybullet as pb
 from mmky import SimScene
 from mmky import primitives
 
-class DropSim(SimScene):
+class PlaceSim(SimScene):
     def __init__(self, robot, obs_res, workspace, obj_size=0.05, obj_kind="box", rand_colors=False, rand_textures=False, cameras={}):
         super().__init__(robot, obs_res, workspace, cameras)
         self.obj_size = obj_size
@@ -25,18 +26,18 @@ class DropSim(SimScene):
             size = [self.obj_size] * 3
             self.make_box(size, obj_pose, color=color, tex=tex, mass=0.1, tag="obj")
         else:
-            self.make_ball(self.obj_size/2, obj_pose, color=color, tex=tex, mass=0.1, tag="obj")
+            self.make_ball(self.obj_size/2, obj_pose, color=color, tex=tex, mass=0.1, tag="obj", restitution=0.2)
 
         color = [random.random(), random.random(), random.random(), 1] if self.rand_colors else [1, 1, 1, 1]
         tex = random.choice(self.textures) if self.rand_textures else None
         mesh = os.path.join("Cup", self.cup_model + ".obj")
         vhcad = os.path.join("Cup", self.cup_model + "_vhacd.obj")
-        position = primitives.generate_random_xy(*self.workspace_span, *self.workspace_radius) + [self.workspace_height]
+        position = primitives.generate_random_xy(*self.workspace_span, *self.workspace_radius) + [self.workspace_height + self.cup_size[2]]
         
         self.load_obj(mesh_file=mesh,
             vhacd_file=vhcad,
             position=position,
-            orientation=[0, 0, 0, 1],
+            orientation=pb.getQuaternionFromEuler([math.pi,0,0]),
             scale=[0.001]*3, # mm
             mass=1,
             tex=tex,
