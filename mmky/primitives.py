@@ -72,7 +72,7 @@ def pivot_dxdy(robot, reference_pose: Tool, dx, dy, dr, max_speed=0.3, max_acc=1
         jtarget = robot.get_inverse_kinematics(Tool.from_xyzrpy(target))
     else:
         jtarget = joints.clone()
-    jtarget[Joints.WRIST3] = joints[Joints.WRIST3] + 0.3 * dr
+    jtarget[Joints.WRIST3] = joints[Joints.WRIST3] + 0.1 * dr
     robot.move(jtarget, max_speed=max_speed, max_acc=max_acc, timeout=0)
     return True
 

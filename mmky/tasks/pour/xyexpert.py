@@ -36,7 +36,7 @@ class XYPourExpert:
             tx, ty = obs["world"]["target"]["position"][:2]
 
             # determine the direction of motion and compute the offset from the target to move the arm to
-            sign = -1 if math.atan2(hx, hy) < math.atan2(ty, tx) else 1
+            sign = -1 if math.atan2(hy, hx) < math.atan2(ty, tx) else 1
             dist = obs["world"]["source"]["size"][0] / 2 + obs["world"]["target"]["size"][0]
             target_xy = primitives.add_cylindrical(tx, ty, 0, dist * sign) # assume the arc is about the same length as the chord (dist)
 
@@ -59,10 +59,9 @@ class XYPourExpert:
             while (target - current) * sign > 0:
                 obs, rew, done, info = self.step([0, 0, sign])
                 current = obs["arm_state"].joint_positions()[5]
-
             # stop
             for i in range(10):
-                self.step([0, 0, 0])
+                 obs, rew, done, info = self.step([0, 0, 0])
 
             self.writer.end_episode(not info["success"])
             iterations -= 1
