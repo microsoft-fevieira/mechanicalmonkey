@@ -2,6 +2,7 @@ use_sim: True
 obs_res: [84, 84]
 render_mode: human
 max_steps: 500
+random_start: True
 workspace:
   radius: [0.5, 0.75]
   span: [3.5, 4.2]

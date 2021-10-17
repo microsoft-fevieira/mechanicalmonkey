@@ -24,7 +24,7 @@ class DroppingExpert(Expert):
                 continue
 
             # pick the object
-            if not primitives.pick(self.robot, self.env.workspace_height + GRASP_HEIGHT, grasp_state=128, max_speed=MAX_SPEED, max_acc=MAX_ACC):
+            if not primitives.pick(self.robot, self.env.workspace_height + GRASP_HEIGHT, pre_grasp_size=128, max_speed=MAX_SPEED, max_acc=MAX_ACC):
                 continue
 
             # move over the cup
@@ -36,7 +36,7 @@ class DroppingExpert(Expert):
             # drop the object
             self.robot.release(timeout=2)
 
-            # discard failed tries 
+            # discard failed tries
             if not self.success:
                 continue
             self._end_episode()

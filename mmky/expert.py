@@ -1,11 +1,11 @@
 import numpy as np
 from mmky.env import RomanEnv, RoboSuiteEnv
 from mmky.writers import RobosuiteWriter
-from roman import ur, rq
+from roman import rq
 
 class Expert:
     def __init__(self, file_template, simscenefn, realscenefn, config):
-        self.env = RomanEnv(simscenefn, realscenefn, config, log_writer=self)
+        self.env = RomanEnv(simscenefn, realscenefn, config, full_state_writer=self)
         self.writer = RobosuiteWriter(file_template)
         self.robot = self.env.robot
         self.images = None
@@ -25,10 +25,9 @@ class Expert:
     def __call__(self, *proprio):
         if self.images:
             arm_state, hand_state, arm_cmd, hand_cmd = proprio
-            if arm_cmd.kind() == ur.UR_CMD_KIND_MOVE_JOINT_SPEEDS:
-                arm_act = arm_cmd.target()
-            else:
-                arm_act = arm_state.joint_speeds()
+            # if arm_cmd.kind() == ur.UR_CMD_KIND_MOVE_JOINT_SPEEDS:
+            #     arm_act = arm_cmd.target()
+            arm_act = arm_state.joint_speeds()
 
             hand_act = 0
             if hand_cmd.kind() == rq.Command._CMD_KIND_MOVE:

@@ -48,7 +48,7 @@ class PourExpert(Expert):
             target = self.robot.joint_positions + [0, 0, 0, 0, 0, sign * 3 * math.pi / 5]
             self.robot.move(target, max_speed=MAX_SPEED, max_acc=MAX_ACC, timeout=15)
 
-            # discard failed tries 
+            # discard failed tries
             if not self.success:
                 continue
             self._end_episode()

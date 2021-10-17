@@ -16,7 +16,7 @@ import yaml
 MAX_OBJECTS_IN_SCENE = 10
 
 class RomanEnv(gym.Env):
-    def __init__(self, simscenefn=SimScene, realscenefn=RealScene, config={}, log_writer=None):
+    def __init__(self, simscenefn=SimScene, realscenefn=RealScene, config={}, full_state_writer=None):
         super().__init__()
         if type(config) is str:
             with open(config) as f:
@@ -24,7 +24,7 @@ class RomanEnv(gym.Env):
         self.config = config
         use_sim = config.get("use_sim", True)
         robot_config = config.get("robot", {})
-        self.robot = Robot(use_sim=use_sim, config=robot_config, writer=log_writer)
+        self.robot = Robot(use_sim=use_sim, config=robot_config, writer=full_state_writer)
         self.obs_res = config.get("obs_res", (84, 84))
         ws = config.get("workspace", {"radius": [3.5, 4.2], "span": [0.5, 0.75], "height": 0})
         self.workspace_radius, self.workspace_span, self.workspace_height = ws.values()
@@ -38,7 +38,7 @@ class RomanEnv(gym.Env):
         self.grasp_mode = config.get("grasp_mode", None)
         self.grasp_mode = eval(self.grasp_mode) if self.grasp_mode else GraspMode.BASIC
         self.grasp_state = config.get("grasp_state", 0)
-        self.random_start = config.get("random_start", True)
+        self.random_start = config.get("random_start", False)
 
         camera_count = self.scene.get_camera_count()
         self.observation_space = Dict({

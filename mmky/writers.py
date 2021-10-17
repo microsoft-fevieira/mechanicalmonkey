@@ -41,17 +41,25 @@ class SimpleNpyWriter(Writer):
             return
         super().log(act, obs, rew, done, info)
         np.save(self.file, np.array(act), allow_pickle=False, fix_imports=False)
+        np.save(self.file, np.array([rew, done, info["success"]]), allow_pickle=False, fix_imports=False)
         self.log_obs(obs)
         self.file.flush()
 
     def log_obs(self, obs):
-        np.save(self.file, obs["images"][0], allow_pickle=False, fix_imports=False)
+        np.save(self.file, obs["cameras"][0], allow_pickle=False, fix_imports=False)
 
     def end_episode(self, discard=False):
         self.file.close()
         self.file = None
         if discard:
             os.remove(self.file_name)
+
+def readSimpleNpy(file):
+    img = np.load(file, allow_pickle=True, fix_imports=False)
+    action = np.load(file, allow_pickle=True, fix_imports=False)
+    rew, done, success = np.load(file, allow_pickle=True, fix_imports=False)
+    return img, action, rew, done, success
+
 
 class RobosuiteWriter(Writer):
     def __init__(self, file_name_template, file_path="trajectories"):
