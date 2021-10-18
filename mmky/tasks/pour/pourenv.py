@@ -12,7 +12,7 @@ GRASP_OFFSET = 0.07
 class PourEnv(RomanEnv):
     '''Simplified environment with a reduced action space (x-y motion and wrist rotation)'''
     def __init__(self):
-        super().__init__(PourSim, PourReal, os.path.join(os.path.dirname(__file__), 'config.yaml'))
+        super().__init__(PourSim, PourReal, os.path.join(os.path.dirname(__file__), 'xyconfig.yaml'))
         self.action_space = Box(low=-1, high=1, shape=(3,))
 
     def reset(self, **kwargs):
