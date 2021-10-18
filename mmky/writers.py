@@ -54,11 +54,26 @@ class SimpleNpyWriter(Writer):
         if discard:
             os.remove(self.file_name)
 
-def readSimpleNpy(file):
-    img = np.load(file, allow_pickle=True, fix_imports=False)
-    action = np.load(file, allow_pickle=True, fix_imports=False)
-    rew, done, success = np.load(file, allow_pickle=True, fix_imports=False)
-    return img, action, rew, done, success
+def readSimpleNpy(file_name):
+    episode = {}
+    episode['images'] = []
+    episode['actions'] = []
+    episode['rewards'] = []
+    episode['dones'] = []
+    episode['successes'] = []
+    with open(file_name, 'rb') as f:
+        try:
+            while(True):
+                episode['images'].append(np.load(f, allow_pickle=True, fix_imports=False))
+                episode['actions'].append(np.load(f, allow_pickle=True, fix_imports=False))
+                rew, done, success = np.load(f, allow_pickle=True, fix_imports=False)
+                episode['rewards'].append(rew)
+                episode['dones'].append(done)
+                episode['successes'].append(success)
+        except IOError:
+            pass
+
+    return episode
 
 
 class RobosuiteWriter(Writer):
@@ -85,7 +100,7 @@ class RobosuiteWriter(Writer):
         self.episode_data['proprios'].append(obs["proprio"])
         self.episode_data['actions'].append(act)
         self.episode_data['rewards'].append(rew)
-        self.episode_data['dones'].append(done)
+        self.episode_data['dones'].append(done)~
         self.episode_data['successes'].append(info["success"])
 
     def end_episode(self, discard=False):
@@ -96,4 +111,10 @@ class RobosuiteWriter(Writer):
                     f.create_dataset(k, data=np.stack(v))
         self.episode_data = None
 
+def readRobosuite(file_name):
+    episode = {}
+    with h5py.File(file_name, 'r') as f:
+        for k in f.keys():
+            episode[k] = np.array(f.get(k))
 
+    return episode
