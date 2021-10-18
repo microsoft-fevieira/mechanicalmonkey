@@ -1,17 +1,18 @@
 import os
 import roman
+from mmky import primitives
 
 class SimScene(roman.SimScene):
-    def __init__(self, robot, obs_res, workspace_height=0, cameras={}):
+    def __init__(self, robot, obs_res, workspace, cameras={}):
         data_dir = os.path.join(os.path.join(os.path.dirname(__file__), 'sim'), 'data')
         tex_dir = os.path.join(data_dir, "img")
         super().__init__(robot=robot, data_dir=data_dir, tex_dir=tex_dir)
         self.obs_res = obs_res
         self.cameras = cameras
-        self.workspace_height = workspace_height
+        self.workspace_radius, self.workspace_span, self.workspace_height = workspace.values()
 
     def setup_scene(self):
-        self.make_table(self.workspace_height) 
+        self.make_table(self.workspace_height)
         for cam_id, cam_def in self.cameras.items():
             self.create_camera(img_res=self.obs_res, tag=cam_id, **cam_def)
 
