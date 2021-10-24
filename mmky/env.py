@@ -106,7 +106,7 @@ class RomanEnv(gym.Env):
         images = self._get_camera_images()
         world = self._get_world_state(force_state_refresh)
         proprio = self._get_proprioceptive_state()
-        self._last_state = self.make_observation(images, world, proprio)
+        self._last_state = RomanEnv.make_observation(images, world, proprio)
         return self._last_state
 
     @staticmethod
@@ -142,7 +142,7 @@ class RomanEnv(gym.Env):
 
 class RoboSuiteEnv(RomanEnv):
     def __init__(self, simscenefn=SimScene, realscenefn=RealScene, config={}):
-        super().__init__(simscenefn=simscenefn, realscenefn=realscenefn, config=config)
+        super().__init__(simscenefn=simscenefn  , realscenefn=realscenefn, config=config)
         self.action_space = Box(low=-1, high=1, shape=(7,))
         self.observation_space = Dict({
             "image": Box(low=0, high=255, shape=(self.obs_res[0], self.obs_res[1], 3), dtype=np.uint8),
@@ -150,19 +150,19 @@ class RoboSuiteEnv(RomanEnv):
 
     def reset(self, **kwargs):
         self.__last_hand_target = 1
-        return super.reset(**kwargs)
+        return super().reset(**kwargs)
 
     def _act(self, action):
-        self.env.robot.move(JointSpeeds(*action[:6]), max_speed=1, max_acc=0.5, timeout=0)
+        self.robot.move(JointSpeeds(*action[:6]), max_speed=1, max_acc=0.5, timeout=0)
         if action[6] != self.__last_hand_target:
             self.__last_hand_target = action[6]
             pos = min(255, max(action[6] * 255, 0))
-            self.env.robot.grasp(position=pos, timeout=0)
+            self.robot.grasp(position=pos, timeout=0)
         return False
 
-    def _observe(self):
-        obs = super()._observe()
-        return self.convert_observation(obs)
+    def _observe(self, force_state_refresh=False):
+        obs = super()._observe(force_state_refresh)
+        return RoboSuiteEnv.make_observation(obs)
 
     @staticmethod
     def make_observation(obs):
@@ -175,6 +175,7 @@ class RoboSuiteEnv(RomanEnv):
         gripper_qpos = [obs["hand_state"].position_A(), 0, obs["hand_state"].position_B(), 0, obs["hand_state"].position_C(), 0]
         gripper_qvel = [0, 0, 0, 0, 0, 0]
         return {"image": obs["cameras"][0],
+                "world": obs["world"],
                 "proprio": np.concatenate((joint_pos_cos,
                                           joint_pos_sin,
                                           joint_vel,

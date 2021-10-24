@@ -100,7 +100,7 @@ class RobosuiteWriter(Writer):
         self.episode_data['proprios'].append(obs["proprio"])
         self.episode_data['actions'].append(act)
         self.episode_data['rewards'].append(rew)
-        self.episode_data['dones'].append(done)~
+        self.episode_data['dones'].append(done)
         self.episode_data['successes'].append(info["success"])
 
     def end_episode(self, discard=False):
