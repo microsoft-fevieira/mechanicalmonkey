@@ -13,7 +13,7 @@ def go_to_start(robot: Robot, start_pose, grasp_mode=GraspMode.PINCH, grasp_stat
     robot.release(grasp_state)
     return True
 
-def pick(robot, grasp_height, pre_grasp_size=0, max_speed=1, max_acc=1, max_time=10):
+def pick(robot, grasp_height, pre_grasp_size=60, max_speed=1, max_acc=1, max_time=10):
     back = robot.tool_pose
     pick_pose = back.clone()
     pick_pose[Tool.Z] = grasp_height
@@ -27,15 +27,15 @@ def pick(robot, grasp_height, pre_grasp_size=0, max_speed=1, max_acc=1, max_time
         return False
     return robot.has_object
 
-def place(robot, release_height, max_speed=0.5, max_acc=0.5, max_time=10):
+def place(robot, release_height, pre_grasp_size=60, contact_force_mult=2, max_speed=0.5, max_acc=0.5, max_time=10):
     back = robot.tool_pose
     release_pose = back.clone()
     release_pose[Tool.Z] = release_height
-    if not robot.touch(release_pose, timeout=max_time, max_speed=0.5, max_acc=0.5):
+    if not robot.touch(release_pose, timeout=max_time, max_speed=max_speed, max_acc=max_acc, contact_force_multiplier=contact_force_mult):
         return False
-    if not robot.release(128, timeout=max_time):
+    if not robot.release(timeout=max_time):
         return False
-    if not robot.move(back, max_speed=0.5, max_acc=0.5, timeout=max_time):
+    if not robot.move(back, max_speed=max_speed, max_acc=max_acc, timeout=max_time):
         return False
     return not robot.has_object
 

@@ -5,9 +5,9 @@ from mmky.expert import Expert
 import random
 import os
 
-GRASP_HEIGHT = 0.04
-MAX_ACC = 0.5
-MAX_SPEED = 0.5
+GRASP_HEIGHT = 0.03
+MAX_ACC = 0.25
+MAX_SPEED = 0.25
 
 class StackingExpert(Expert):
     def __init__(self):
@@ -39,6 +39,14 @@ class StackingExpert(Expert):
             # place the cube
             if not primitives.place(self.robot, self.env.workspace_height + GRASP_HEIGHT, max_speed=MAX_SPEED, max_acc=MAX_ACC):
                 continue
+
+            # check what happened
+            self._writer_enabled = False
+            self.env.scene.get_world_state(force_state_refresh=True)
+            self._writer_enabled = True
+
+            # make sure we get another observation
+            self.robot.stop()
 
             # discard failed tries 
             if not self.success:

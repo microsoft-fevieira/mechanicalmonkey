@@ -1,4 +1,5 @@
 import numpy as np
+import time
 from mmky.env import RomanEnv, RoboSuiteEnv
 from mmky.writers import RobosuiteWriter
 from roman import rq
@@ -10,19 +11,24 @@ class Expert:
         self.robot = self.env.robot
         self.images = None
         self.done = False
+        self._writer_enabled = False
 
     def _start_episode(self):
         obs = self.env.reset()
         self.writer.start_episode(RoboSuiteEnv.make_observation(obs))
         self.world = self.env._get_world_state()
         self.done = False
+        self._writer_enabled = True
 
     def _end_episode(self):
         self.done = True
         self.robot.step()
         self.writer.end_episode()
+        self._writer_enabled = False
 
     def __call__(self, *proprio):
+        if not self._writer_enabled:
+            return
         if self.images:
             arm_state, hand_state, arm_cmd, hand_cmd = proprio
             # if arm_cmd.kind() == ur.UR_CMD_KIND_MOVE_JOINT_SPEEDS:

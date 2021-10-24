@@ -74,18 +74,20 @@ class RealScene:
         if not self.detector:
             return
         back = self.robot.tool_pose
-        if self.neutral_position:
-            self.robot.move(self.neutral_position, max_speed=3, max_acc=1)
-        if self.out_position:
-            self.robot.move(self.out_position, max_speed=3, max_acc=1)
+        if not self.robot.joint_positions.allclose(self.out_position):
+            if self.neutral_position:
+                self.robot.move(self.neutral_position, max_speed=3, max_acc=1)
+            if self.out_position:
+                self.robot.move(self.out_position, max_speed=3, max_acc=1)
         self.__stop_cameras()
         self.detector.start()
         self._world_state = self.detector.detect_keypoints(use_arm_coord=True)
         self.detector.stop()
         self.__start_cameras()
-        if self.neutral_position:
-            self.robot.move(self.neutral_position, max_speed=3, max_acc=1)
-        self.robot.move(back, max_speed=3, max_acc=1)
+        if not self.robot.tool_pose.allclose(back):
+            if self.neutral_position:
+                self.robot.move(self.neutral_position, max_speed=3, max_acc=1)
+            self.robot.move(back, max_speed=3, max_acc=1)
 
     def __start_cameras(self):
         for cam in self.cameras.values():
