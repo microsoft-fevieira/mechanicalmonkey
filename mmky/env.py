@@ -24,13 +24,21 @@ class RomanEnv(gym.Env):
         self.config = config
         use_sim = config.get("use_sim", True)
         robot_config = config.get("robot", {})
+        instance_key = random.randint(0, 0x7FFFFFFF)
+        robot_config["sim.instance_key"] = instance_key
+        self.home_pose = config.get("start_position", None)
+        if self.home_pose:
+            self.home_pose = eval(self.home_pose)
+            if not isinstance(self.home_pose, Joints):
+                raise ValueError(f"The value provided for the configuration entry 'start_position' is invalid: {self.home_pose} is not an instance of Joints type.")
+            robot_config["sim.start_config"] = self.home_pose.array
         self.robot = Robot(use_sim=use_sim, config=robot_config, writer=full_state_writer)
         self.obs_res = config.get("obs_res", (84, 84))
-        ws = config.get("workspace", {"radius": [3.5, 4.2], "span": [0.5, 0.75], "height": 0})
+        ws = config.get("workspace", {"radius": [0.5, 0.75], "span": [3.5, 4.2], "height": 0})
         self.workspace_radius, self.workspace_span, self.workspace_height = ws.values()
         scene_fn, scene_cfg = (simscenefn, "sim_scene") if use_sim else (realscenefn, "real_scene")
         scene_config = config.get(scene_cfg, {})
-        self.scene = scene_fn(robot=self.robot, obs_res=self.obs_res, workspace=ws, **scene_config)
+        self.scene = scene_fn(robot=self.robot, obs_res=self.obs_res, workspace=ws, instance_key=instance_key, **scene_config)
         self.robot.connect()
         self.scene.connect()
         self.render_mode = config.get("render_mode", None)
@@ -66,13 +74,17 @@ class RomanEnv(gym.Env):
         self.total_reward = 0
         self.is_done = False
         self.success = False
-        self.scene.reset(**kwargs)
-        self.start_pose = self.robot.joint_positions
-        primitives.go_to_start(self.robot, self.start_pose, self.grasp_mode, self.grasp_state)
-        tool_pose = self.robot.tool_pose
+        if isinstance(self.home_pose, Joints):
+            joints = self.home_pose or self.robot.joint_positions
+            self.robot.move(joints, max_speed=0.5, max_acc=0.5)
+            self.home_pose = self.robot.tool_pose
+        elif not self.home_pose:
+            self.home_pose = self.robot.tool_pose
         if self.random_start:
-            tool_pose[:2] = primitives.generate_random_xy(*self.workspace_span, *self.workspace_radius)
-        self.robot.move(tool_pose, max_speed=1, max_acc=1)
+            self.home_pose[:2] = primitives.generate_random_xy(*self.workspace_span, *self.workspace_radius)
+        self.robot.set_hand_mode(self.grasp_mode)
+        self.robot.grasp(self.grasp_state)
+        self.scene.reset(home_pose=self.home_pose, **kwargs)
         return self._observe()
 
     def end_episode(self, success=True):

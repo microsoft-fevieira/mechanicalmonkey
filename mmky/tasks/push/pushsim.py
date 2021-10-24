@@ -5,8 +5,8 @@ from mmky import SimScene
 from mmky import primitives
 
 class PushSim(SimScene):
-    def __init__(self, robot, obs_res, workspace, ball_count=2, ball_radius=0.035, rand_colors=False, cameras={}):
-        super().__init__(robot, obs_res, workspace, cameras)
+    def __init__(self, robot, obs_res, workspace, ball_count=2, ball_radius=0.035, rand_colors=False, cameras={}, **kwargs):
+        super().__init__(robot, obs_res, workspace, cameras, **kwargs)
         self.ball_count = ball_count
         self.ball_radius = ball_radius
         self.rand_colors = rand_colors

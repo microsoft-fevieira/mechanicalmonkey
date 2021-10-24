@@ -42,8 +42,9 @@ class PourSim(SimScene):
                  rand_tex=False,
                  rand_mesh=False,
                  rand_light=False,
-                 cameras={}):
-        super().__init__(robot=robot, obs_res=obs_res, cameras=cameras, workspace=workspace)
+                 cameras={}, 
+                 **kwargs):
+        super().__init__(robot=robot, obs_res=obs_res, cameras=cameras, workspace=workspace, **kwargs)
         self.ball_radius = ball_radius
         self.rand_size = rand_size
         self.rand_tex = rand_tex
@@ -68,7 +69,10 @@ class PourSim(SimScene):
         self.target_cup_position = np.array([tx, ty, self.workspace_height])
 
         self.robot.active_force_limit = (None, None)
-        return super().reset(**kwargs)
+        super().reset(**kwargs)
+
+    def move_home(self, home_pose):
+        primitives.pivot_dxdy(self.robot, home_pose, 0, 0, 0)
 
     def setup_scene(self):
         super().setup_scene()

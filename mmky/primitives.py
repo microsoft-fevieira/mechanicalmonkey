@@ -47,7 +47,7 @@ def pivot_xy(robot: Robot, reference_pose: Tool, x, y, dr, max_speed=0.3, max_ac
     jtarget = robot.get_inverse_kinematics(target)
     jtarget[Joints.WRIST3] = robot.joint_positions[Joints.WRIST3] + 0.3 * dr
     res = robot.move(jtarget, max_speed=max_speed, max_acc=max_acc, timeout=max_time)
-    assert not res or robot.tool_pose.allclose(target)
+    assert not res or robot.tool_pose.allclose(target, rotation_tolerance = 0.02)
     return res
 
 def move_dxdy(robot, reference_z, dx, dy, dr, max_speed=0.1, max_acc=1):

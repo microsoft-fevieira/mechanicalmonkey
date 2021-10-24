@@ -6,8 +6,8 @@ from mmky import SimScene
 from mmky import primitives
 
 class PlaceSim(SimScene):
-    def __init__(self, robot, obs_res, workspace, obj_size=0.05, obj_kind="box", rand_colors=False, rand_textures=False, cameras={}):
-        super().__init__(robot, obs_res, workspace, cameras)
+    def __init__(self, robot, obs_res, workspace, obj_size=0.05, obj_kind="box", rand_colors=False, rand_textures=False, cameras={}, **kwargs):
+        super().__init__(robot, obs_res, workspace, cameras, **kwargs)
         self.obj_size = obj_size
         self.obj_kind = obj_kind
         self.cup_model = "cup_no_tex"

@@ -5,8 +5,8 @@ from mmky import SimScene
 from mmky import primitives
 
 class DropSim(SimScene):
-    def __init__(self, robot, obs_res, workspace, obj_size=0.05, obj_kind="box", rand_colors=False, rand_textures=False, cameras={}):
-        super().__init__(robot, obs_res, workspace, cameras)
+    def __init__(self, robot, obs_res, workspace, obj_size=0.05, obj_kind="box", rand_colors=False, rand_textures=False, cameras={}, **kwargs):
+        super().__init__(robot, obs_res, workspace, cameras, **kwargs)
         self.obj_size = obj_size
         self.obj_kind = obj_kind
         self.cup_model = "cup_no_tex"
@@ -21,7 +21,7 @@ class DropSim(SimScene):
         color = [random.random(), random.random(), random.random(), 1] if self.rand_colors else [1, 0.75, 0.25, 1]
         tex = random.choice(self.textures) if self.rand_textures else None
     
-        if self.obj_kind == "box":
+        if self.obj_kind == "box" or self.obj_kind == "cube":
             size = [self.obj_size] * 3
             self.make_box(size, obj_pose, color=color, tex=tex, mass=0.1, tag="obj")
         else:

@@ -14,7 +14,8 @@ class RealScene:
                  workspace,
                  out_position=None,
                  neutral_position=None,
-                 detector=None):
+                 detector=None, 
+                 **kwargs):
         self.robot = robot
         self.obs_res = obs_res
         self.workspace_radius, self.workspace_span, self.workspace_height = workspace.values()
@@ -35,8 +36,12 @@ class RealScene:
             synchronized_images_only=False)
         self._world_state = None
 
-    def reset(self):
+    def reset(self, home_pose, **kwargs):
         self._update_state()
+        self.move_home(home_pose)
+
+    def move_home(self, home_pose):
+        self.robot.move(home_pose, max_speed=0.5, max_acc=0.5)
 
     def connect(self):
         self.__start_cameras()
@@ -70,10 +75,9 @@ class RealScene:
             self._update_state()
         return self._world_state
 
-    def _update_state(self):
+    def _update_state(self, home_pose=None):
         if not self.detector:
             return
-        back = self.robot.tool_pose
         if not self.robot.joint_positions.allclose(self.out_position):
             if self.neutral_position:
                 self.robot.move(self.neutral_position, max_speed=3, max_acc=1)
@@ -84,10 +88,8 @@ class RealScene:
         self._world_state = self.detector.detect_keypoints(use_arm_coord=True)
         self.detector.stop()
         self.__start_cameras()
-        if not self.robot.tool_pose.allclose(back):
-            if self.neutral_position:
-                self.robot.move(self.neutral_position, max_speed=3, max_acc=1)
-            self.robot.move(back, max_speed=3, max_acc=1)
+        if self.neutral_position:
+            self.robot.move(self.neutral_position, max_speed=3, max_acc=1)
 
     def __start_cameras(self):
         for cam in self.cameras.values():
