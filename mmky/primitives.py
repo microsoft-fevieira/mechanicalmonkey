@@ -74,7 +74,7 @@ def move_dxdy(robot, reference_z, dx, dy, dr, max_speed=0.1, max_acc=1):
     robot.move(jtarget, max_speed=max_speed, max_acc=max_acc, timeout=0)
     return False
 
-def pivot_dxdy(robot, reference_pose: Tool, dx, dy, dr, max_speed=0.3, max_acc=1):
+def pivot_dxdy(robot, dx, dy, dr, reference_pose: Tool, max_speed=0.3, max_acc=1):
     pose = robot.tool_pose
     joints = robot.joint_positions
 

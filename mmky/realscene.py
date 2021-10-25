@@ -65,6 +65,7 @@ class RealScene:
         rh = int(capture.color.height_pixels * f + 0.5)
         img = cv2.resize(capture.color.data, (rw, rh))
         img = img[int((rh-h)/2): int((rh+h)/2), int((rw-w)/2): int((rw+w)/2)]
+        img = cv2.cvtColor(img, cv2.COLOR_BGRA2RGB) 
         return img
 
     def get_camera_images(self):

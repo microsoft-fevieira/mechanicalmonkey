@@ -72,7 +72,7 @@ class PourSim(SimScene):
         super().reset(**kwargs)
 
     def move_home(self, home_pose):
-        primitives.pivot_dxdy(self.robot, home_pose, 0, 0, 0)
+        primitives.pivot_dxdy(self.robot, 0, 0, 0, reference_pose=home_pose)
 
     def setup_scene(self):
         super().setup_scene()

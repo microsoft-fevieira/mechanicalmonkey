@@ -10,7 +10,7 @@ CUBE_COUNT = 2
 
 class StackEnv(RomanEnv):
     def __init__(self, use_2d_action_space=True):
-        super().__init__(StackSim, StackReal, os.path.join(os.path.dirname(__file__), 'config.yaml'))
+        super().__init__(StackSim, StackReal, os.path.join(os.path.dirname(__file__), 'xyconfig.yaml'))
         self.action_space = Box(low=-1, high=1, shape=(3,))
 
     def _act(self, action):

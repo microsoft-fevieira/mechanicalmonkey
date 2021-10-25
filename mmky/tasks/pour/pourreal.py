@@ -29,7 +29,7 @@ class PourReal(RealScene):
 
     def move_home(self, home_pose):
         x, y = home_pose[:2]
-        primitives.pivot_xy(self.robot, home_pose, x, y, 0)
+        primitives.pivot_xy(self.robot, x, y, 0, reference_pose=home_pose)
 
     def get_world_state(self, force_state_refresh):
         raw_state = super().get_world_state(force_state_refresh)

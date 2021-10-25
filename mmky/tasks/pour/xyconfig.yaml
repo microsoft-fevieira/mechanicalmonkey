@@ -1,20 +1,21 @@
-use_sim: True
+use_sim: False
 obs_res: [224, 224]
 render_mode: human
 max_steps: 500
 random_start: True
 workspace:
-  radius: [0.5, 0.75]
-  span: [3.5, 4.2]
+  radius: [0.65, 0.75]
+  span: [3.5, 4]
   height: -0.122
 grasp_mode: GraspMode.NARROW
+grasp_state: 0
+start_config: Joints(0.5, -1.42, 2.28,-0.76, 1.24, -0.26)
 
 robot:
   arm_ip: 192.168.1.2
   hand_ip: 192.168.1.11
   local_ip: 192.168.1.9
   local_port: 50003
-  sim.start_config: [0.5, -1.78, 2.60, -0.82, 1.59, -0.26]
   sim.use_gui: True
 
 sim_scene:
@@ -30,7 +31,7 @@ sim_scene:
 real_scene:
   cup_size: [0.085, 0.085, 0.104]
   ball_count: 2
-  out_position: Joints(1.28, -1.78, 2.60, -0.82, 1.59, -0.26)
+  out_position: Joints(1.28, -1.42, 2.28,-0.76, 1.24, -0.26)
   neutral_position: None
   detector:
     device_id: 1

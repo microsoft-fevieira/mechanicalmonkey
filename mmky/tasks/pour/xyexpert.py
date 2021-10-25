@@ -32,11 +32,11 @@ class XYPourExpert:
 
             # move to the second cup
             current_xy = obs["arm_state"].tool_pose()[:2]
-            hx, hy = current_xy
+            sx, sy = obs["world"]["source"]["position"][:2]
             tx, ty = obs["world"]["target"]["position"][:2]
 
             # determine the direction of motion and compute the offset from the target to move the arm to
-            sign = -1 if math.atan2(hy, hx) < math.atan2(ty, tx) else 1
+            sign = -1 if math.atan2(sy, sx) < math.atan2(ty, tx) else 1
             dist = obs["world"]["source"]["size"][0] / 2 + obs["world"]["target"]["size"][0]
             target_xy = primitives.add_cylindrical(tx, ty, 0, dist * sign) # assume the arc is about the same length as the chord (dist)
 
@@ -63,7 +63,13 @@ class XYPourExpert:
             for i in range(10):
                  obs, rew, done, info = self.step([0, 0, 0])
 
+            # check what happened
+            _, rew, done, info = self.env.finalize()
+            
+            self.writer.log([0, 0, 0], obs, rew, done, info)
             self.writer.end_episode(not info["success"])
+            if not info["success"]:
+                input("Episode failed and some balls are out, please rearrange the scene.")
             iterations -= 1
 
 
@@ -71,4 +77,4 @@ if __name__ == '__main__':
     env = PourEnv()
     writer = writers.SimpleNpyWriter("cup_pour_simple")
     expert = XYPourExpert(env, writer)
-    expert.run(500)
+    expert.run(200)

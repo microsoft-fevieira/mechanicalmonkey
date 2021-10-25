@@ -1,5 +1,6 @@
-import os
 from cv2 import sepFilter2D
+import os
+import numpy as np
 from gym.spaces import Box
 from roman import Tool, Joints
 from mmky.env import RomanEnv
@@ -19,18 +20,32 @@ class PourEnv(RomanEnv):
         while True:
             obs = super().reset(**kwargs)
             self.home = obs["arm_state"].tool_pose()
+            self.target_pos = obs["world"]["target"]["position"][:2]
+            self.target_size = obs["world"]["target"]["size"][0]
             hx, hy = self.home[:2]
             # grab the source cup
             x, y = obs["world"]["source"]["position"][:2]
-            if not primitives.pivot_xy(self.robot, self.home, x, y, 0):
+            if not primitives.pivot_xy(self.robot, x, y, 0, reference_pose=self.home):
                 continue
-            if not primitives.pick(self.robot, self.workspace_height + GRASP_OFFSET):
+            self._src_cup_pos = self.robot.joint_positions
+            if not primitives.pick(self.robot, self.workspace_height + GRASP_OFFSET, pre_grasp_size=0):
                 continue
-            if not primitives.pivot_xy(self.robot, self.home, hx, hy, 0):
+            if not primitives.pivot_xy(self.robot, hx, hy, 0, reference_pose=self.home):
                 continue
             return self._observe()
 
+    def finalize(self):
+        self.robot.move(self._src_cup_pos, max_speed=0.5, max_acc=0.5)
+        # pick a random spot and set the cup there
+        x, y = tx, ty = self.target_pos
+        while np.linalg.norm([x-tx, y-ty]) < self.target_size * 2.5:
+            x, y = primitives.generate_random_xy(*self.workspace_span, *self.workspace_radius)
+        primitives.pivot_xy(self.robot, x, y, 0, reference_pose=self.home, max_speed=0.5, max_acc=0.5)
+        primitives.place(self.robot, self.workspace_height + GRASP_OFFSET, max_speed=0.3, max_acc=0.3)
+        self.scene.get_world_state(force_state_refresh=True)
+        return self.step([0, 0, 0]) 
+
     def _act(self, action):
-        dx, dy, dr = action
-        primitives.pivot_dxdy(self.robot, self.home, dx, dy, dr)
+        dx, dy, dr = np.array(action, dtype=int)
+        primitives.pivot_dxdy(self.robot, dx, dy, dr, reference_pose=self.home, max_speed=0.3, max_acc=0.3)
         return False # force_full_obs

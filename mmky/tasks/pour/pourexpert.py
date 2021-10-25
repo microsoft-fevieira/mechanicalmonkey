@@ -23,8 +23,7 @@ class PourExpert(Expert):
             # move over first cup
             first = self.robot.tool_pose
             sx, sy = self.world["source"]["position"][:2]
-            sx, sy = primitives.add_cylindrical(sx, sy, 0, 0)
-            if not primitives.pivot_xy(self.robot, home_pose, sx, sy, 0, max_speed=MAX_SPEED, max_acc=MAX_ACC):
+            if not primitives.pivot_xy(self.robot, sx, sy, 0, reference_pose=home_pose, max_speed=MAX_SPEED, max_acc=MAX_ACC):
                 continue
 
             # pick the first cup
@@ -40,7 +39,7 @@ class PourExpert(Expert):
             dist = self.world["source"]["size"][0] / 2 + self.world["target"]["size"][0]
             tx, ty = primitives.add_cylindrical(tx, ty, 0, dist * sign) # assume the arc is about the same length as the chord (dist)
 
-            if not primitives.pivot_xy(self.robot, home_pose, tx, ty, 0, max_speed=MAX_SPEED, max_acc=MAX_ACC):
+            if not primitives.pivot_xy(self.robot, tx, ty, 0, reference_pose=home_pose, max_speed=MAX_SPEED, max_acc=MAX_ACC):
                 continue
 
             # pour
@@ -48,12 +47,12 @@ class PourExpert(Expert):
             target = before_pour + [0, 0, 0, 0, 0, sign * 3 * math.pi / 5]
             self.robot.move(target, max_speed=MAX_SPEED, max_acc=MAX_ACC, timeout=15)
             
-             # pick a random spot and set the cup there
+            # pick a random spot and set the cup there
             self.robot.move(before_pour, max_speed=MAX_SPEED, max_acc=MAX_ACC, timeout=15)
             x, y = tx, ty = self.world["target"]["position"][:2]
             while np.linalg.norm([x-tx, y-ty]) < self.world["source"]["size"][0] * 2.5:
                 x, y = primitives.generate_random_xy(*self.env.workspace_span, *self.env.workspace_radius)
-            primitives.pivot_xy(self.robot, home_pose, x, y, 0, max_speed=MAX_SPEED, max_acc=MAX_ACC)
+            primitives.pivot_xy(self.robot, x, y, 0, reference_pose=home_pose, max_speed=MAX_SPEED, max_acc=MAX_ACC)
             primitives.place(self.robot, self.env.workspace_height + GRASP_HEIGHT, max_speed=MAX_SPEED, max_acc=MAX_ACC)
 
             # check what happened
