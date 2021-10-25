@@ -24,8 +24,11 @@ class RomanEnv(gym.Env):
         self.config = config
         use_sim = config.get("use_sim", True)
         robot_config = config.get("robot", {})
-        instance_key = random.randint(0, 0x7FFFFFFF)
-        robot_config["sim.instance_key"] = instance_key
+        instance_key = None
+        if not robot_config.get("sim.use_gui", True):
+            # using an instance key allows multiple env instances (each with a robot/pybullet process) on the same machine
+            instance_key = random.randint(0, 0x7FFFFFFF)
+            robot_config["sim.instance_key"] = instance_key
         self.home_pose = config.get("start_position", None)
         if self.home_pose:
             self.home_pose = eval(self.home_pose)
@@ -82,9 +85,9 @@ class RomanEnv(gym.Env):
             self.home_pose = self.robot.tool_pose
         if self.random_start:
             self.home_pose[:2] = primitives.generate_random_xy(*self.workspace_span, *self.workspace_radius)
+        self.scene.reset(home_pose=self.home_pose, **kwargs)
         self.robot.set_hand_mode(self.grasp_mode)
         self.robot.grasp(self.grasp_state)
-        self.scene.reset(home_pose=self.home_pose, **kwargs)
         return self._observe()
 
     def end_episode(self, success=True):

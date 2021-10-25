@@ -2,7 +2,7 @@ import math
 import numpy as np
 import random
 from roman import Robot, Tool, Joints, GraspMode
-
+TOOL_YAW_OFFSET = math.radians(15)
 
 def go_to_start(robot: Robot, start_pose, grasp_mode=GraspMode.PINCH, grasp_state=0, max_speed=1, max_acc=1):
     if not robot.move(start_pose, max_speed=max_speed, max_acc=max_acc, timeout=10):
@@ -12,6 +12,13 @@ def go_to_start(robot: Robot, start_pose, grasp_mode=GraspMode.PINCH, grasp_stat
     robot.set_hand_mode(grasp_mode)
     robot.release(grasp_state)
     return True
+
+def reach_and_pick(robot, obj_position, relative_grasp_height, pre_grasp_size=60, max_speed=1, max_acc=1, max_time=10):
+    pos = robot.tool_pose
+    pos[:2] = obj_position[:2]
+    if not robot.move(pos, max_speed=max_speed, max_acc=max_acc, timeout=max_time):
+        return False
+    return pick(robot, obj_position[2] + relative_grasp_height, pre_grasp_size=pre_grasp_size, max_speed=max_speed, max_acc=max_acc, max_time=max_time)
 
 def pick(robot, grasp_height, pre_grasp_size=60, max_speed=1, max_acc=1, max_time=10):
     back = robot.tool_pose
@@ -39,15 +46,23 @@ def place(robot, release_height, pre_grasp_size=60, contact_force_mult=2, max_sp
         return False
     return not robot.has_object
 
-def pivot_xy(robot: Robot, reference_pose: Tool, x, y, dr, max_speed=0.3, max_acc=1, max_time=10):
-    target = np.array(reference_pose.to_xyzrpy())
+def pivot_xy(robot: Robot, x, y, dr, reference_pose: Tool = None, max_speed=0.3, max_acc=1, max_time=10):
+    target = np.array((reference_pose if reference_pose else robot.tool_pose).to_xyzrpy())
     target[:2] = x, y
     target[5] = math.atan2(y, x) + math.pi / 2 # yaw, compensating for robot config offset (base offset is pi, wrist offset from base is -pi/2)
     target = Tool.from_xyzrpy(target)
     jtarget = robot.get_inverse_kinematics(target)
-    jtarget[Joints.WRIST3] = robot.joint_positions[Joints.WRIST3] + 0.3 * dr
+    jtarget[Joints.WRIST3] = robot.joint_positions[Joints.WRIST3] + dr
     res = robot.move(jtarget, max_speed=max_speed, max_acc=max_acc, timeout=max_time)
-    assert not res or robot.tool_pose.allclose(target, rotation_tolerance = 0.02)
+    assert not res or robot.tool_pose.allclose(target, rotation_tolerance = 10) # ignore rotation, since we also moved the wrist
+    return res
+
+def move_xy(robot: Robot, x, y, yaw, reference_pose: Tool = None, max_speed=0.3, max_acc=1, max_time=10):
+    target = np.array((reference_pose if reference_pose else robot.tool_pose).to_xyzrpy())
+    target[:2] = x, y
+    target[5] = yaw + TOOL_YAW_OFFSET
+    target = Tool.from_xyzrpy(target)
+    res = robot.move(target, max_speed=max_speed, max_acc=max_acc, timeout=max_time)
     return res
 
 def move_dxdy(robot, reference_z, dx, dy, dr, max_speed=0.1, max_acc=1):

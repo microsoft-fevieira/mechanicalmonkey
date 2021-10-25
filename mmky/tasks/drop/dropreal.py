@@ -66,7 +66,6 @@ class DropReal(RealScene):
 
         world["cup"] = cup
         world["obj"] = out_obj
-        world["raw_state"] = raw_state
 
         return world
 

@@ -5,29 +5,28 @@ from mmky import SimScene
 from mmky import primitives
 
 class PushSim(SimScene):
-    def __init__(self, robot, obs_res, workspace, ball_count=2, ball_radius=0.035, rand_colors=False, cameras={}, **kwargs):
+    def __init__(self, robot, obs_res, workspace, ball_count=2, ball_radius=0.035, cameras={}, **kwargs):
         super().__init__(robot, obs_res, workspace, cameras, **kwargs)
         self.ball_count = ball_count
         self.ball_radius = ball_radius
-        self.rand_colors = rand_colors
 
     def reset(self, **kwargs):
         super().reset(**kwargs)
-        
+        colors = [(1, 1, 0, 1), (1, 0.5, 0, 1)]
+        tags = ["yellow", "orange"]
         for i in range(self.ball_count):
             ball_pose = primitives.generate_random_xy(*self.workspace_span, *self.workspace_radius) + [self.workspace_height]
-            color = [random.random(), random.random(), random.random(), 1] if self.rand_colors else [0.8, 0.2, 0.2, 1]
-            self.make_ball(self.ball_radius, ball_pose, color=color, mass=0.04, tag=f"ball{i}")
+            self.make_ball(self.ball_radius, ball_pose, color=colors[i], mass=0.04, tag=tags[i])
 
-        self.start_world = self.get_world_state()
+        self.start_state = self.get_world_state()
 
     def eval_state(self, world_state):
         rew = 0
-        for i in range(self.ball_count):
-            tag = f"ball{i}"
-            if not np.allclose(world_state[tag]["position"][:2], self.start_world[tag]["position"][:2]):
-                rew += 1 
-
-        success = rew == self.ball_count
-        done = False # let the agent decide 
+        success = False
+        done = False
+        if np.linalg.norm(self.start_state["orange"]["position"][:2] - world_state["orange"]["position"][:2]) > 0.05 and \
+           np.linalg.norm(self.start_state["yellow"]["position"][:2] - world_state["yellow"]["position"][:2]) > 0.05:
+            rew = 1
+            success = True
+            done = True
         return rew, success, done
