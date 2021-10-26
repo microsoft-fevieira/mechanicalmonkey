@@ -28,21 +28,20 @@ class PushingExpert(Expert):
             d = (t_pos - o_pos) / np.linalg.norm(t_pos - o_pos)
             theta = math.atan2(t_pos[1] - o_pos[1], t_pos[0] - o_pos[0])
 
-            # pick a point on the same line, offset by half the size of the ball
+            # pick a point on the same line, offset by the size of the ball
             x, y = o_pos + d * -o_size[0]
-            base_rotation = self.robot.joint_positions[Joints.BASE]
             if not primitives.move_xy(self.robot, x, y, theta, max_speed=MAX_SPEED, max_acc=MAX_ACC, max_time=20):
                 continue
 
             # lower the arm
-            high_z = self.robot.tool_pose[Tool.Z]  
+            high_z = self.robot.tool_pose[Tool.Z]
             low = self.robot.tool_pose
-            low[Tool.Z] = o_z - PUSH_DEPTH
+            low[Tool.Z] = o_z # - PUSH_DEPTH
             if not self.robot.move(low, timeout=10, max_speed=MAX_SPEED, max_acc=MAX_ACC):
                 continue
 
             # move towards the center
-            x, y = t_pos + d * -o_size[0] / 2
+            x, y = t_pos + d * -o_size[0]
             if not primitives.move_xy(self.robot, x, y, theta, max_speed=MAX_SPEED, max_acc=MAX_ACC, max_time=20):
                 continue
 
@@ -57,7 +56,7 @@ class PushingExpert(Expert):
             # make sure we get another observation
             self.robot.stop()
 
-            # discard failed tries 
+            # discard failed tries
             if not self.success:
                 continue
             self._end_episode()
