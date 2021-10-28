@@ -5,6 +5,7 @@ from mmky.tasks.stack.stackreal import StackReal
 import os
 
 cfg_file = os.path.join(os.path.dirname(__file__), 'test_config.yaml')
+#cfg_file = "/home/m/code/mechanicalmonkey/mmky/tasks/stack/config.yaml"
 
 def test_step():
     env = mmky.env.RoboSuiteEnv(StackSim, StackReal, config=cfg_file)

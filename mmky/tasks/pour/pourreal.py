@@ -3,7 +3,7 @@ from mmky import RealScene
 from mmky import primitives
 
 def _is_orange(color):
-    return color[0] < 0.5 * color[1] < 0.75 * color[2]
+    return color[0] < 0.5 * color[1] < color[2]
 
 class PourReal(RealScene):
     def __init__(self,
@@ -15,7 +15,7 @@ class PourReal(RealScene):
                  workspace,
                  out_position=None,
                  neutral_position=None,
-                 detector=None, 
+                 detector=None,
                  **kwargs):
         super().__init__(robot, obs_res, cameras, workspace, out_position, neutral_position, detector)
         self.cup_size = cup_size
@@ -42,14 +42,14 @@ class PourReal(RealScene):
                 v["position"][2] = self.workspace_height
                 v["size"] = np.array(self.cup_size) # the size provided by the detector is quite off (particularly the height)
                 v["has_balls"] = _is_orange(v["color"])
-                cups.append(v)               
+                cups.append(v)
             else:
                 if _is_orange(v["color"]) and v["size"][0] < 0.05: # small orange object, so its a ball
                     balls.append(v)
                 else:
                     # ???
                     unknown.append(v)
-        
+
         assert len(cups) == 2
         # if any balls are in cups, remove them from the ball set
         spilled_balls = []
