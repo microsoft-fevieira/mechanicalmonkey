@@ -142,7 +142,7 @@ class RomanEnv(gym.Env):
         return self.scene.get_world_state(force_state_refresh)
 
     def _get_proprioceptive_state(self):
-        self.robot.step() # update the proprioceptive state without interrupting the motion or overriding the commands
+        #self.robot.step() # update the proprioceptive state without interrupting the motion or overriding the commands
         arm_state, hand_state = self.robot.last_state()
         arm_cmd, hand_cmd = self.robot.last_command()
         return arm_state, hand_state, arm_cmd, hand_cmd

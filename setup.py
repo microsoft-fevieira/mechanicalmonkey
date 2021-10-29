@@ -9,6 +9,7 @@ setuptools.setup(
         'torch',
         'opencv-python',
         'pyyaml',
+        'h5py',
         'roman@git+https://github.com/microsoft/roman.git'
     ],
     packages=setuptools.find_packages(),
