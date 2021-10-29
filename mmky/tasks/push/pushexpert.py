@@ -9,8 +9,8 @@ import math
 import numpy as np
 
 PUSH_DEPTH = 0.03
-MAX_ACC = 0.25
-MAX_SPEED = 0.25
+MAX_ACC = 0.5
+MAX_SPEED = 0.5
 
 class PushingExpert(Expert):
     def __init__(self):

@@ -6,8 +6,8 @@ import random
 import os
 
 GRASP_HEIGHT = 0.03
-MAX_ACC = 0.25
-MAX_SPEED = 0.25
+MAX_ACC = 0.5
+MAX_SPEED = 0.5
 
 class StackingExpert(Expert):
     def __init__(self):

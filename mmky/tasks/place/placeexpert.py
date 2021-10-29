@@ -6,9 +6,9 @@ import random
 import os
 
 CUP_HEIGHT=0.11
-GRASP_HEIGHT = 0.03
-MAX_ACC = 0.25
-MAX_SPEED = 0.25
+GRASP_HEIGHT = 0.02
+MAX_ACC = 0.5
+MAX_SPEED = 0.5
 
 class PlacingExpert(Expert):
     def __init__(self):

@@ -8,8 +8,8 @@ import random
 import os
 
 GRASP_HEIGHT = 0.07
-MAX_ACC = 0.25
-MAX_SPEED = 0.25
+MAX_ACC = 0.5
+MAX_SPEED = 0.5
 
 class PourExpert(Expert):
     def __init__(self):

@@ -1,9 +1,8 @@
 import math
 import cv2
 from roman import Robot, Joints, Tool
-from mmky import k4a
+
 from mmky import primitives
-from mmky.detector import KinectDetector
 HALF_PI = math.pi / 2
 
 class RealScene:
@@ -16,6 +15,9 @@ class RealScene:
                  neutral_position=None,
                  detector=None, 
                  **kwargs):
+        from mmky import k4a
+        from mmky.detector import KinectDetector
+        
         self.robot = robot
         self.obs_res = obs_res
         self.workspace_radius, self.workspace_span, self.workspace_height = workspace.values()
