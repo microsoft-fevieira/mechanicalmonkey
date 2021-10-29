@@ -18,6 +18,7 @@ robot:
   sim.use_gui: False
 
 sim_scene:
+  cpu_rendering: True
   cube_size: 0.04
   cube_count: 2
   cameras:

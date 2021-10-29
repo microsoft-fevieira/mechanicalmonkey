@@ -14,6 +14,7 @@ class Expert:
         self._writer_enabled = False
 
     def _start_episode(self):
+        self._writer_enabled = False
         obs = self.env.reset()
         self.writer.start_episode(RoboSuiteEnv.make_observation(obs))
         self.world = self.env._get_world_state()

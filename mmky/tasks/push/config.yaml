@@ -1,4 +1,4 @@
-use_sim: False
+use_sim: True
 obs_res: [84, 84]
 render_mode: human
 max_steps: 1000
@@ -19,7 +19,6 @@ robot:
 
 sim_scene:
   ball_radius: 0.035
-  ball_count: 2
   cameras:
     cam1:
       cameraEyePosition: [-1.0, -0.8, 0.40]

@@ -19,11 +19,11 @@ class KinectDetector(object):
         params.minArea = blob_detector.get("minArea", 25)  # The dot in 20pt font has area of about 30
         params.maxArea = blob_detector.get("minArea", 900)
         params.filterByCircularity = blob_detector.get("filterByCircularity", True)
-        params.maxCircularity = blob_detector.get("maxCircularity", 1)  
+        params.maxCircularity = blob_detector.get("maxCircularity", 1)
         params.minCircularity = blob_detector.get("minCircularity", 0.6)
         params.filterByConvexity = blob_detector.get("filterByConvexity", True)
         params.maxConvexity = blob_detector.get("maxConvexity", 1)
-        params.minConvexity = blob_detector.get("minConvexity", 0.8)  
+        params.minConvexity = blob_detector.get("minConvexity", 0.8)
         params.filterByInertia = blob_detector.get("filterByInertia", False)
         params.minThreshold = blob_detector.get("maxInertiaRatio", 1)
         params.maxThreshold = blob_detector.get("minInertiaRatio", 0.5)
@@ -171,7 +171,7 @@ class KinectDetector(object):
             radius = int(kp.size/2)
             if self.show_debug_view:
                 img[y - radius: y + radius, x - radius: x + radius] += 50
-            
+
             region = depth_img[y - 3: y + 4, x - 3: x + 4]
             if not np.any(region > 0):
                 continue
@@ -193,12 +193,12 @@ class KinectDetector(object):
                 k4a.ECalibrationType.DEPTH)) / 1000 # in meters
             obj["depth_pos_3d"] = depth_pos_3d
             obj["position"] = self.to_arm_coord(depth_pos_3d) if use_arm_coord else depth_pos_3d
-            obj["elevation"] = objects[y-radius:y+radius, x-radius:x+radius] / 1000.
+            obj["elevation"] = np.average(objects[y-radius:y+radius, x-radius:x+radius]) / 1000.
             obj["size"] = np.abs(depth_pos_3d - depth_pos_3d_delta) * 2
             obj["size"][2] = np.max(obj["elevation"])
             obj["depth_pos_2d"] = np.array([
-                kp.pt[1], # x in image 
-                kp.pt[0], # y in image 
+                kp.pt[1], # x in image
+                kp.pt[0], # y in image
                 depth])
             rgb_coords = self.transform.pixel_2d_to_pixel_2d(
                 (kp.pt[0], kp.pt[1]), # TODO fix (see detector branch). Coords are all over the place
@@ -209,12 +209,12 @@ class KinectDetector(object):
             rgb_y = int(rgb_coords[1] + 0.5)
             obj["rgb_pos_2d"] = np.array([rgb_x, rgb_y, depth])
             obj["img"] = color_img[rgb_y-radius:rgb_y+radius, rgb_x-radius:rgb_x+radius]
-            obj["color"] = color_img[rgb_y, rgb_x]
+            obj["color"] = np.average(color_img[rgb_y-radius:rgb_y+radius, rgb_x-radius:rgb_x+radius], axis=(0, 1))
             if self.show_debug_view:
                 color_img[rgb_y-radius:rgb_y+radius, rgb_x-radius:rgb_x+radius] += np.array([50, 50, 50, 0], dtype=np.uint8)
             obj["mask_pos_2d"] = np.array([
-                rgb_x - self.rgb_mask_bounding_box[1].start, # x in image 
-                rgb_y - self.rgb_mask_bounding_box[0].start, # y in image 
+                rgb_x - self.rgb_mask_bounding_box[1].start, # x in image
+                rgb_y - self.rgb_mask_bounding_box[0].start, # y in image
                 depth])
             pts[i] = obj
             i = i + 1
@@ -222,12 +222,13 @@ class KinectDetector(object):
         if self.show_debug_view:
             cv2.imshow("workspace", self.get_last_image())
             cv2.imshow("rgb", color_img)
+            cv2.waitKey(20)
 
         # Draw detected blobs as red circles.
         # cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS ensures the size of the circle corresponds to the size of blob
         im_with_keypoints = cv2.drawKeypoints(img, keypoints, np.array([]), (0, 0, 255), cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
         cv2.imshow("Keypoints", im_with_keypoints)
-        cv2.waitKey(1)
+        cv2.waitKey(120)
         return pts
 
     def get_last_image(self, crop_to_mask=True):
@@ -260,4 +261,3 @@ if __name__ == '__main__':
     # while True:
     #     k.detect_keypoints()
     # k.close()
-
