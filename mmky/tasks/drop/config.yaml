@@ -1,6 +1,6 @@
 use_sim: True
 obs_res: [84, 84]
-render_mode: human
+render_mode: rgb
 max_steps: 500
 random_start: True
 workspace:
@@ -16,9 +16,10 @@ robot:
   hand_ip: 192.168.1.11
   local_ip: 192.168.1.9
   local_port: 50003
-  sim.use_gui: True
+  sim.use_gui: False
 
 sim_scene:
+  cpu_rendering: True
   #obj_size: 0.08 # big ball
   #obj_kind: "ball"
   obj_size: 0.04
