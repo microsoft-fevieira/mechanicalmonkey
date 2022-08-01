@@ -1,6 +1,6 @@
 use_sim: True
-obs_res: [84, 84]
-render_mode: rgb
+obs_res: [512, 512]
+render_mode: human
 max_steps: 1000
 random_start: True
 workspace:
@@ -16,10 +16,10 @@ robot:
   hand_ip: 192.168.1.11
   local_ip: 192.168.1.9
   local_port: 50003
-  sim.use_gui: False
+  sim.use_gui: True
 
 sim_scene:
-  cpu_rendering: True
+  cpu_rendering: False
   cube_size: 0.04
   cube_count: 2
   cameras:

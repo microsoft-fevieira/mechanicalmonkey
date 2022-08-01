@@ -10,13 +10,15 @@ class PushSim(SimScene):
         self.ball_radius = ball_radius
 
     def reset(self, **kwargs):
-        super().reset(**kwargs)
-        ball_pose = primitives.generate_random_xy(*self.workspace_span, *self.workspace_radius) + [self.workspace_height]
-        self.make_ball(self.ball_radius, ball_pose, color=(1, 0.5, 0, 1), mass=0.04, tag="object", rollingFriction=10)
-        target_pose = [-0.461, -0.377, self.workspace_height]
-        self.make_box([0.02, 0.02, 0.0001], target_pose, mass=0, tag="target")
-
-        self.start_state = self.get_world_state()
+        too_close = True
+        while too_close:
+            super().reset(**kwargs)
+            ball_pose = primitives.generate_random_xy(*self.workspace_span, *self.workspace_radius) + [self.workspace_height]
+            self.make_ball(self.ball_radius, ball_pose, color=(1, 0.5, 0, 1), mass=0.04, tag="object", rollingFriction=10)
+            target_pose = [-0.461, -0.377, self.workspace_height]
+            self.make_box([0.02, 0.02, 0.0001], target_pose, mass=0, tag="target")
+            self.start_state = self.get_world_state()
+            too_close = self.eval_state(self.start_state)[1]
 
     def eval_state(self, world_state):
         rew = 0

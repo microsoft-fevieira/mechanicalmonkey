@@ -12,7 +12,6 @@ from mmky import primitives
 import cv2
 import yaml
 
-
 MAX_OBJECTS_IN_SCENE = 10
 
 class RomanEnv(gym.Env):
