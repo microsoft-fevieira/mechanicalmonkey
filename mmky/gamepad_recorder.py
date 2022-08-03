@@ -105,14 +105,16 @@ if __name__ == '__main__':
             robot.move(target, max_speed=2, max_acc=1, timeout=0.0)
         else:
             robot.move_rt(target, duration=0.01, max_speed=2, max_acc=1, timeout=0.0)
-
+    home = Joints(0, -math.pi / 2, math.pi / 2, -math.pi / 2, -math.pi / 2, 0)
     t0 = time.time()
     while not done:
         # print(time.time()-t0)
         t0 = time.time()
         gk.refresh()
 
-        if gk.button_pressed(BTN_SHOULDER_RIGHT):
+        if gk.button_pressed(BTN_X):
+            move(home, max_acc=1)
+        elif gk.button_pressed(BTN_SHOULDER_RIGHT):
             # wrist control, joint speeds
             wrist1 = -gk.l_thumb_y()
             wrist2 = gk.l_thumb_x()
