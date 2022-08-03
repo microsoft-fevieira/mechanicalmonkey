@@ -62,10 +62,10 @@ class gamepad_or_keyboard():
         return self.gps.buttons & btn if self.gps else keyboard.is_pressed(keymap[btn])
 
     def left_trigger(self):
-        return self.gps.left_trigger if self.gps else 255 * keyboard.is_pressed('shift+enter')
+        return self.gps.left_trigger if self.gps else 255 * keyboard.is_pressed(',')
 
     def right_trigger(self):
-        return self.gps.right_trigger if self.gps else 255 * keyboard.is_pressed('enter')
+        return self.gps.right_trigger if self.gps else 255 * keyboard.is_pressed('.')
 
     def r_thumb_x(self):
         return self.normalize_thumb_value(self.gps.r_thumb_x) if self.gps else 0 if keyboard.is_pressed('shift') else 1 if keyboard.is_pressed('right') else -1 if keyboard.is_pressed('left') else 0
@@ -81,20 +81,20 @@ class gamepad_or_keyboard():
 
 if __name__ == '__main__':
     use_sim=True
-    robot = connect(use_sim=use_sim, config={"hand.activate": False})
+    robot = connect(use_sim=use_sim)
     gk = gamepad_or_keyboard()
     done = False
     print('*****************************************.')
     print(
-        'Thumbsticks: primary way to move the arm (EEF position control in cylindrical coordinates).'
-        'Thumbsticks + right shoulder button: primary way to rotate the gripper (joint control).'
-        'D-Pad: alternate way to move the arm (x-y position control in cartesian coordinates).'
-        'Thumbsticks + left shoulder button: alternate way to rotate gripper (EEF position control, roll/pitch/yaw).'
-        'Triggers: open/close gripper.'
-        'A / B: start/stop recording'
-        'X: move to home position.'
-        'Y: change the grasp mode (pinch vs basic).'
-        'Menu button: enable/disable free drive (kinestetic control).'
+        'Thumbsticks: primary way to move the arm (EEF position control in cylindrical coordinates).\n'
+        'Thumbsticks + right shoulder button: primary way to rotate the gripper (joint control).\n'
+        'D-Pad: alternate way to move the arm (x-y position control in cartesian coordinates).\n'
+        'Thumbsticks + left shoulder button: alternate way to rotate gripper (EEF position control, roll/pitch/yaw).\n'
+        'Triggers: open/close gripper.\n'
+        'A / B: start/stop recording.\n'
+        'X: move to home position.\n'
+        'Y: change the grasp mode (pinch vs basic).\n'
+        'Menu button: enable/disable free drive (kinestetic control).\n'
         'Esc: exit.'
     )
 
@@ -155,10 +155,10 @@ if __name__ == '__main__':
             move(target, duration=0.01, max_speed=2, max_acc=1)
             #robot.move(target, max_speed=2, max_acc=1, timeout=0.0)
 
-        if gk.left_trigger() > robot.hand.state.position():
-            robot.open(gk.left_trigger(), timeout=0)
-        elif gk.right_trigger() > 255 - robot.hand.state.position():
-            robot.grasp(255 - gk.right_trigger(), timeout=0)
+        if gk.left_trigger() > 255 - robot.hand.state.position():
+            robot.open(255 - gk.left_trigger(), timeout=0)
+        elif gk.right_trigger() > robot.hand.state.position():
+            robot.grasp(gk.right_trigger(), timeout=0)
 
         # Y btn changes grasp
         if gk.button_pressed(BTN_Y):
