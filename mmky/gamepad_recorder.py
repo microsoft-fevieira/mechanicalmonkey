@@ -1,17 +1,21 @@
-import time
 try:
     import inputs
 except:
-    print('This sample needs the inputs package (pip install inputs).')
+    print('This script needs the inputs package (pip install inputs).')
     exit()
 try:
     import keyboard
 except:
-    print('This sample needs the keyboard package (pip install keyboard).')
+    print('This script needs the keyboard package (pip install keyboard).')
     exit()
 
-from roman import *
+import time
 import math
+import cv2
+import numpy as np
+from roman import *
+import mmky.k4a as k4a
+
 DPAD_UP = 1
 DPAD_DOWN = 2
 DPAD_LEFT = 4
@@ -71,7 +75,8 @@ class gamepad_or_keyboard():
         return self.normalize_thumb_value(self.gps.r_thumb_x) if self.gps else 0 if keyboard.is_pressed('shift') else 1 if keyboard.is_pressed('right') else -1 if keyboard.is_pressed('left') else 0
 
     def r_thumb_y(self):
-        return self.normalize_thumb_value(self.gps.r_thumb_y) if self.gps else 0 if keyboard.is_pressed('shift') else 1 if keyboard.is_pressed('up') else -1 if keyboard.is_pressed('down') else 0
+        # since right thumb up/down is reversed (like airplane pitch), keyboard mapping is negated
+        return self.normalize_thumb_value(self.gps.r_thumb_y) if self.gps else 0 if keyboard.is_pressed('shift') else -1 if keyboard.is_pressed('up') else 1 if keyboard.is_pressed('down') else 0
 
     def l_thumb_x(self):
         return self.normalize_thumb_value(self.gps.l_thumb_x) if self.gps else 1 if keyboard.is_pressed('shift+right') else -1 if keyboard.is_pressed('shift+left') else 0
@@ -81,6 +86,9 @@ class gamepad_or_keyboard():
 
 if __name__ == '__main__':
     use_sim=True
+    joint_gain = 0.1
+    pose_gain = 0.02
+
     robot = connect(use_sim=use_sim)
     gk = gamepad_or_keyboard()
     done = False
@@ -100,12 +108,15 @@ if __name__ == '__main__':
 
     assert(not robot.is_moving())
     def move(target, duration=0.01, max_speed=2, max_acc=1):
+        # get the observation
+        # perform the action
         if use_sim:
             # hack, move_rt doesn't yet work well in sim
             robot.move(target, max_speed=2, max_acc=1, timeout=0.0)
         else:
             robot.move_rt(target, duration=0.01, max_speed=2, max_acc=1, timeout=0.0)
     home = Joints(0, -math.pi / 2, math.pi / 2, -math.pi / 2, -math.pi / 2, 0)
+    tangent_move_reference = (0, 0)
     t0 = time.time()
     while not done:
         # print(time.time()-t0)
@@ -115,46 +126,57 @@ if __name__ == '__main__':
         if gk.button_pressed(BTN_X):
             move(home, max_acc=1)
         elif gk.button_pressed(BTN_SHOULDER_RIGHT):
-            # wrist control, joint speeds
-            wrist1 = -gk.l_thumb_y()
-            wrist2 = gk.l_thumb_x()
-            wrist3 = -gk.r_thumb_x()
-            target = JointSpeeds(base=0, shoulder=0, elbow=0, wrist1=wrist1, wrist2=wrist2, wrist3=wrist3)
-            move(target, max_acc=1)
+            # wrist control in joint positions. Direction is optimized for the gripper-down position
+            wrist1 = joint_gain * gk.r_thumb_y()
+            wrist2 = -joint_gain * gk.l_thumb_x()
+            wrist3 = joint_gain * gk.r_thumb_x()
+            target = robot.arm.state.joint_positions() + [0, 0, 0, wrist1, wrist2, wrist3]
+            move(target)
         elif gk.button_pressed(BTN_SHOULDER_LEFT):
             # wrist control, roll/pitch/yaw
-            roll = 0.1 * gk.l_thumb_x()
-            pitch = 0.1 * -gk.r_thumb_y()
-            yaw = 0.1 * -gk.r_thumb_x()
+            roll = joint_gain * gk.l_thumb_x()
+            pitch = joint_gain * -gk.r_thumb_y()
+            yaw = joint_gain * -gk.r_thumb_x()
             target = robot.arm.state.tool_pose().to_xyzrpy() + [0, 0, 0, roll, pitch, yaw]
             target = Tool.from_xyzrpy(target)
-            move(target, duration=0.01, max_speed=2, max_acc=1)
+            move(target)
         elif gk.button_pressed(DPAD_DOWN) or gk.button_pressed(DPAD_LEFT) or gk.button_pressed(DPAD_RIGHT) or gk.button_pressed(DPAD_UP):
             # x-y move in robot base coordinate system
-            dx = 0.02 * (-1 if gk.button_pressed(DPAD_LEFT) else 1 if gk.button_pressed(DPAD_RIGHT) else 0)
-            dy = 0.02 * (1 if gk.button_pressed(DPAD_UP) else 1 if gk.button_pressed(DPAD_DOWN) else 0)
-            dz = 0.02 * -gk.r_thumb_y()
+            dx = pose_gain * (-1 if gk.button_pressed(DPAD_LEFT) else 1 if gk.button_pressed(DPAD_RIGHT) else 0)
+            dy = pose_gain * (1 if gk.button_pressed(DPAD_UP) else 1 if gk.button_pressed(DPAD_DOWN) else 0)
+            dz = pose_gain * -gk.r_thumb_y()
             target = robot.arm.state.tool_pose() + [dx, dy, dz, 0, 0, 0]
-            move(target, duration=0.01, max_speed=2, max_acc=1)
+            move(target)
         else:
-            # move in cylindrical coordinates
             da = -gk.r_thumb_x()
-            dz = 0.02 * -gk.r_thumb_y()
-            dd = 0.02 * gk.l_thumb_y()
-            dt = 0.02 * gk.l_thumb_x()
-            b = robot.arm.state.joint_positions()[Joints.BASE]
-            b = b + da
+            dz = pose_gain * -gk.r_thumb_y()
+            dd = pose_gain * gk.l_thumb_y()
+            dt = -pose_gain * gk.l_thumb_x()
             (x, y, z, roll, pitch, yaw) = robot.arm.state.tool_pose().to_xyzrpy()
-            yaw = yaw + da
             a = math.atan2(y, x)
             d = math.sqrt(x*x + y*y)
-            a = a + da
-            d = d + dd
+
+            if dt == 0:
+                # move in cylindrical coordinates
+                a = a + da
+                d = d + dd
+                yaw = yaw + da
+                tangent_move_reference = (a, d)
+            else:
+                # tangent move
+                ta, td = tangent_move_reference
+                tt = math.sin(a - ta) + dt
+                td = td + dd
+                da = math.atan2(tt, td)
+                a = ta + da
+                d = math.sqrt(tt*tt + td*td)
+                tangent_move_reference = (ta, td)
+
             x = d * math.cos(a)
             y = d * math.sin(a)
             z = z + dz
             target = Tool.from_xyzrpy([x, y, z, roll, pitch, yaw])
-            move(target, duration=0.01, max_speed=2, max_acc=1)
+            move(target)
             #robot.move(target, max_speed=2, max_acc=1, timeout=0.0)
 
         if gk.left_trigger() > 255 - robot.hand.state.position():
