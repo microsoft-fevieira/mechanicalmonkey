@@ -111,7 +111,7 @@ if __name__ == '__main__':
         # perform the action
         if use_sim:
             # hack, move_rt doesn't yet work well in sim
-            robot.move(target, max_speed=2, max_acc=1, timeout=0.0)
+            robot.move(target, max_speed=1, max_acc=1, timeout=0.0)
         else:
             robot.move_rt(target, duration=0.01, max_speed=1, max_acc=1, timeout=0.0)
     home = Joints(0, -math.pi / 2, math.pi / 2, -math.pi / 2, -math.pi / 2, 0)
