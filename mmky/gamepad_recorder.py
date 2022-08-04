@@ -108,13 +108,12 @@ if __name__ == '__main__':
 
     assert(not robot.is_moving())
     def move(target, duration=0.01, max_speed=2, max_acc=1):
-        # get the observation
         # perform the action
         if use_sim:
             # hack, move_rt doesn't yet work well in sim
             robot.move(target, max_speed=2, max_acc=1, timeout=0.0)
         else:
-            robot.move_rt(target, duration=0.01, max_speed=2, max_acc=1, timeout=0.0)
+            robot.move_rt(target, duration=0.01, max_speed=1, max_acc=1, timeout=0.0)
     home = Joints(0, -math.pi / 2, math.pi / 2, -math.pi / 2, -math.pi / 2, 0)
     tangent_move_reference = (0, 0)
     t0 = time.time()
@@ -124,7 +123,7 @@ if __name__ == '__main__':
         gk.refresh()
 
         if gk.button_pressed(BTN_X):
-            move(home, max_acc=1)
+            move(home)
         elif gk.button_pressed(BTN_SHOULDER_RIGHT):
             # wrist control in joint positions. Direction is optimized for the gripper-down position
             wrist1 = joint_gain * gk.r_thumb_y()
