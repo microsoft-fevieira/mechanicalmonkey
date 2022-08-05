@@ -58,12 +58,19 @@ class gamepad_or_keyboard():
         # eliminate deadzone and normalize
         return (v - 8000 * v/abs(v) if abs(v) > 8000 else 0) / (32768.0 - 8000)
 
-    def refresh(self, id=0):
+    def refresh(self):
         if len(inputs.devices.gamepads) > self.gamepad_id:
-            self.gps = inputs.devices.gamepads[id]._GamePad__read_device().gamepad
+            self.gps = inputs.devices.gamepads[self.gamepad_id]._GamePad__read_device().gamepad
 
     def button_pressed(self, btn):
         return self.gps.buttons & btn if self.gps else keyboard.is_pressed(keymap[btn])
+
+    def button_toggled(self, btn, prev_state=False):
+        if self.button_pressed(btn):
+            while self.button_pressed(btn):
+                self.refresh()
+            return not prev_state
+        return prev_state
 
     def left_trigger(self):
         return self.gps.left_trigger if self.gps else 255 * keyboard.is_pressed(',')
@@ -88,6 +95,7 @@ if __name__ == '__main__':
     use_sim=True
     joint_gain = 0.1
     pose_gain = 0.02
+    xy_flipped = False
 
     robot = connect(use_sim=use_sim)
     gk = gamepad_or_keyboard()
@@ -99,10 +107,11 @@ if __name__ == '__main__':
         'D-Pad: alternate way to move the arm (x-y position control in cartesian coordinates).\n'
         'Thumbsticks + left shoulder button: alternate way to rotate gripper (EEF position control, roll/pitch/yaw).\n'
         'Triggers: open/close gripper.\n'
-        'A / B: start/stop recording.\n'
-        'X: move to home position.\n'
+        'A: start recording.\n'
+        'B: stop recording.\n'
+        'X: swap x/y axes on D-Pad.\n'
         'Y: change the grasp mode (pinch vs basic).\n'
-        'Menu button: enable/disable free drive (kinestetic control).\n'
+        'Menu button: move to home position.\n'
         'Esc: exit.'
     )
 
@@ -121,8 +130,9 @@ if __name__ == '__main__':
         # print(time.time()-t0)
         t0 = time.time()
         gk.refresh()
+        xy_flipped = gk.button_toggled(BTN_X, xy_flipped)
 
-        if gk.button_pressed(BTN_X):
+        if gk.button_pressed(BTN_MENU):
             move(home)
         elif gk.button_pressed(BTN_SHOULDER_RIGHT):
             # wrist control in joint positions. Direction is optimized for the gripper-down position
@@ -142,7 +152,12 @@ if __name__ == '__main__':
         elif gk.button_pressed(DPAD_DOWN) or gk.button_pressed(DPAD_LEFT) or gk.button_pressed(DPAD_RIGHT) or gk.button_pressed(DPAD_UP):
             # x-y move in robot base coordinate system
             dx = pose_gain * (-1 if gk.button_pressed(DPAD_LEFT) else 1 if gk.button_pressed(DPAD_RIGHT) else 0)
-            dy = pose_gain * (1 if gk.button_pressed(DPAD_UP) else 1 if gk.button_pressed(DPAD_DOWN) else 0)
+            dy = pose_gain * (1 if gk.button_pressed(DPAD_UP) else -1 if gk.button_pressed(DPAD_DOWN) else 0)
+            if xy_flipped:
+                tmp = dx
+                dx = dy
+                dy = -tmp
+
             dz = pose_gain * -gk.r_thumb_y()
             target = robot.arm.state.tool_pose() + [dx, dy, dz, 0, 0, 0]
             move(target)
@@ -178,13 +193,16 @@ if __name__ == '__main__':
             move(target)
             #robot.move(target, max_speed=2, max_acc=1, timeout=0.0)
 
-        if gk.left_trigger() > 255 - robot.hand.state.position():
-            robot.open(255 - gk.left_trigger(), timeout=0)
-        elif gk.right_trigger() > robot.hand.state.position():
-            robot.grasp(gk.right_trigger(), timeout=0)
+        if gk.left_trigger() > 0 or gk.right_trigger() > 0:
+            if gk.left_trigger() > 30:
+                robot.open(speed=gk.left_trigger(), timeout=0)
+            elif gk.right_trigger() > 30:
+                robot.grasp(speed=gk.right_trigger(), timeout=0)
+            else:
+                robot.hand.stop()
 
         # Y btn changes grasp
-        if gk.button_pressed(BTN_Y):
+        if gk.button_toggled(BTN_Y):
             mode = GraspMode.PINCH if robot.hand.state.mode() != GraspMode.PINCH else GraspMode.BASIC
             robot.hand.set_mode(mode)
 

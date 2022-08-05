@@ -182,7 +182,7 @@ class RoboSuiteEnv(RomanEnv):
     def make_observation(obs):
         joint_pos_cos = np.cos(obs["arm_state"].joint_positions())
         joint_pos_sin = np.sin(obs["arm_state"].joint_positions())
-        joint_vel = np.sin(obs["arm_state"].joint_speeds())
+        joint_vel = obs["arm_state"].joint_speeds()
         eef = obs["arm_state"].tool_pose()
         eef_pos = eef.position()
         eef_quat = eef.orientation()
