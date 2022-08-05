@@ -96,6 +96,7 @@ if __name__ == '__main__':
     joint_gain = 0.1
     pose_gain = 0.02
     xy_flipped = False
+    gripper_moving = False
 
     robot = connect(use_sim=use_sim)
     gk = gamepad_or_keyboard()
@@ -193,13 +194,15 @@ if __name__ == '__main__':
             move(target)
             #robot.move(target, max_speed=2, max_acc=1, timeout=0.0)
 
-        if gk.left_trigger() > 0 or gk.right_trigger() > 0:
-            if gk.left_trigger() > 30:
+            if gk.left_trigger() > 0:
                 robot.open(speed=gk.left_trigger(), timeout=0)
-            elif gk.right_trigger() > 30:
+                gripper_moving = True
+            elif gk.right_trigger() > 0:
                 robot.grasp(speed=gk.right_trigger(), timeout=0)
-            else:
-                robot.hand.stop()
+                gripper_moving = True
+            elif gripper_moving:
+                robot.hand.stop(blocking:False)
+                gripper_moving = False
 
         # Y btn changes grasp
         if gk.button_toggled(BTN_Y):
