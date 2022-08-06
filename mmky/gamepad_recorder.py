@@ -49,6 +49,11 @@ keymap = {
     BTN_Y: 'Y'
 }
 
+def lerp(r, t):
+    a = np.array(r[0])
+    b = np.array(r[1])
+    return a + (b - a) * t
+
 class gamepad_or_keyboard():
     def __init__(self, gamepad_id=0):
         self.gamepad_id = gamepad_id
@@ -82,8 +87,7 @@ class gamepad_or_keyboard():
         return self.normalize_thumb_value(self.gps.r_thumb_x) if self.gps else 0 if keyboard.is_pressed('shift') else 1 if keyboard.is_pressed('right') else -1 if keyboard.is_pressed('left') else 0
 
     def r_thumb_y(self):
-        # since right thumb up/down is reversed (like airplane pitch), keyboard mapping is negated
-        return self.normalize_thumb_value(self.gps.r_thumb_y) if self.gps else 0 if keyboard.is_pressed('shift') else -1 if keyboard.is_pressed('up') else 1 if keyboard.is_pressed('down') else 0
+        return self.normalize_thumb_value(self.gps.r_thumb_y) if self.gps else 0 if keyboard.is_pressed('shift') else 1 if keyboard.is_pressed('up') else -1 if keyboard.is_pressed('down') else 0
 
     def l_thumb_x(self):
         return self.normalize_thumb_value(self.gps.l_thumb_x) if self.gps else 1 if keyboard.is_pressed('shift+right') else -1 if keyboard.is_pressed('shift+left') else 0
@@ -97,8 +101,9 @@ if __name__ == '__main__':
     pose_gain = 0.02
     xy_flipped = False
     gripper_moving = False
-    force_limit_default = (UR_DEFAULT_FORCE_LOW_BOUND, UR_DEFAULT_FORCE_HIGH_BOUND)
-    force_override = (3 * np.array(UR_DEFAULT_FORCE_LOW_BOUND), 3 * np.array(UR_DEFAULT_FORCE_HIGH_BOUND))
+    force_limit_default = FORCE_LIMIT_DEFAULT[1]
+    force_limit_range = (FORCE_LIMIT_TOUCH[1], force_limit_default)
+    force_limit_override_range = (force_limit_default, 5 * np.array(force_limit_default))
 
     robot = connect(use_sim=use_sim)
     gk = gamepad_or_keyboard()
@@ -109,6 +114,7 @@ if __name__ == '__main__':
         'Thumbsticks + right shoulder button: primary way to rotate the gripper (joint control).\n'
         'D-Pad: alternate way to move the arm (x-y position control in cartesian coordinates).\n'
         'Thumbsticks + left shoulder button: alternate way to rotate gripper (EEF position control, roll/pitch/yaw).\n'
+        'Thumbstick press: force limit override.\n"
         'Triggers: open/close gripper.\n'
         'A: start recording.\n'
         'B: stop recording.\n'
@@ -119,13 +125,14 @@ if __name__ == '__main__':
     )
 
     assert(not robot.is_moving())
-    def move(target, force_limit, duration=0.01, max_speed=2, max_acc=1):
+    def move(target, max_force, duration=0.01, max_speed=2, max_acc=1):
+        max_force = np.array(max_force)
         # perform the action
         if use_sim:
             # hack, move_rt doesn't yet work well in sim
-            robot.move(target, max_speed=1, max_acc=1, force_limit=force_limit, timeout=0.0)
+            robot.move(target, max_speed=1, max_acc=1, force_limit=(-max_force, max_force), timeout=0.0)
         else:
-            robot.move_rt(target, duration=0.01, max_speed=1, max_acc=1, force_limit=force_limit, timeout=0.0)
+            robot.move_rt(target, duration=0.01, max_speed=1, max_acc=1, force_limit=(-max_force, max_force), timeout=0.0)
 
     home = Joints(0, -math.pi / 2, math.pi / 2, -math.pi / 2, -math.pi / 2, 0)
     tangent_move_reference = (0, 0)
@@ -135,24 +142,26 @@ if __name__ == '__main__':
         t0 = time.time()
         gk.refresh()
         xy_flipped = gk.button_toggled(BTN_X, xy_flipped)
-        force_limit = force_override if gk.button_pressed(THUMB_STICK_PRESS_LEFT) or gk.button_pressed(THUMB_STICK_PRESS_RIGHT) else force_limit_default
+        f_range = force_limit_override_range if gk.button_pressed(THUMB_STICK_PRESS_LEFT) or gk.button_pressed(THUMB_STICK_PRESS_RIGHT) else force_limit_range
         if gk.button_pressed(BTN_MENU):
-            move(home)
+            move(home, force_limit_default)
         elif gk.button_pressed(BTN_SHOULDER_RIGHT):
             # wrist control in joint positions. Direction is optimized for the gripper-down position
-            wrist1 = joint_gain * gk.r_thumb_y()
-            wrist2 = -joint_gain * gk.l_thumb_x()
-            wrist3 = joint_gain * gk.r_thumb_x()
-            target = robot.arm.state.joint_positions() + [0, 0, 0, wrist1, wrist2, wrist3]
-            move(target, force_limit)
+            wrist1 = gk.r_thumb_y()
+            wrist2 = -gk.l_thumb_x()
+            wrist3 = gk.r_thumb_x()
+            target = robot.arm.state.joint_positions() + joint_gain * np.array([0, 0, 0, wrist1, wrist2, wrist3])
+            norm = np.linalg.norm([wrist1, wrist2, wrist3])
+            move(target, lerp(f_range, norm))
         elif gk.button_pressed(BTN_SHOULDER_LEFT):
             # wrist control, roll/pitch/yaw
-            roll = joint_gain * gk.l_thumb_x()
-            pitch = joint_gain * -gk.r_thumb_y()
-            yaw = joint_gain * -gk.r_thumb_x()
-            target = robot.arm.state.tool_pose().to_xyzrpy() + [0, 0, 0, roll, pitch, yaw]
+            roll = gk.l_thumb_x()
+            pitch = -gk.r_thumb_y()
+            yaw = -gk.r_thumb_x()
+            target = robot.arm.state.tool_pose().to_xyzrpy() + joint_gain * np.array([0, 0, 0, roll, pitch, yaw])
             target = Tool.from_xyzrpy(target)
-            move(target, force_limit)
+            norm = np.linalg.norm([roll, pitch, yaw])
+            move(target, lerp(f_range, norm))
         elif gk.button_pressed(DPAD_DOWN) or gk.button_pressed(DPAD_LEFT) or gk.button_pressed(DPAD_RIGHT) or gk.button_pressed(DPAD_UP):
             # x-y move in robot base coordinate system
             dx = pose_gain * (-1 if gk.button_pressed(DPAD_LEFT) else 1 if gk.button_pressed(DPAD_RIGHT) else 0)
@@ -164,12 +173,19 @@ if __name__ == '__main__':
 
             dz = pose_gain * -gk.r_thumb_y()
             target = robot.arm.state.tool_pose() + [dx, dy, dz, 0, 0, 0]
-            move(target, force_limit)
+            move(target, force_limit_default)
         else:
-            da = -gk.r_thumb_x()
-            dz = pose_gain * -gk.r_thumb_y()
-            dd = pose_gain * gk.l_thumb_y()
-            dt = -pose_gain * gk.l_thumb_x()
+            rx = gk.r_thumb_x()
+            ry = gk.r_thumb_y()
+            lx = gk.l_thumb_x()
+            ly = gk.l_thumb_y()
+            norm = np.linalg.norm([rx, ry, lx, ly])
+            force = lerp(f_range, norm)
+
+            da = joint_gain * -rx
+            dz = pose_gain * ry
+            dd = pose_gain * ly
+            dt = -pose_gain * lx
             (x, y, z, roll, pitch, yaw) = robot.arm.state.tool_pose().to_xyzrpy()
             a = math.atan2(y, x)
             d = math.sqrt(x*x + y*y)
@@ -194,18 +210,17 @@ if __name__ == '__main__':
             y = d * math.sin(a)
             z = z + dz
             target = Tool.from_xyzrpy([x, y, z, roll, pitch, yaw])
-            move(target, force_limit)
-            #robot.move(target, max_speed=2, max_acc=1, timeout=0.0)
+            move(target, force)
 
-            if gk.left_trigger() > 0:
-                robot.open(speed=gk.left_trigger(), timeout=0)
-                gripper_moving = True
-            elif gk.right_trigger() > 0:
-                robot.grasp(speed=gk.right_trigger(), timeout=0)
-                gripper_moving = True
-            elif gripper_moving:
-                robot.hand.stop(blocking=False)
-                gripper_moving = False
+        if gk.left_trigger() > 0:
+            robot.open(speed=gk.left_trigger(), timeout=0)
+            gripper_moving = True
+        elif gk.right_trigger() > 0:
+            robot.grasp(speed=gk.right_trigger(), timeout=0)
+            gripper_moving = True
+        elif gripper_moving:
+            robot.hand.stop(blocking=False)
+            gripper_moving = False
 
         # Y btn changes grasp
         if gk.button_toggled(BTN_Y):
